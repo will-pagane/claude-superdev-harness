@@ -84,24 +84,33 @@ That request produced **13 items transcribed almost directly** in a five-branch 
 
 **Nothing deferred → skip this step entirely.** Do not create an empty file, do not invent filler items.
 
-Otherwise, find the pendings file (`PENDINGS.md` at the repo root, else `docs/PENDINGS.md`, else the project's named equivalent). **If none exists, create `PENDINGS.md` at the repo root by copying [pendings-template.md](pendings-template.md) verbatim** — header plus the `---`, nothing else. That header is load-bearing: never edit it, never drop it, never write items above it. Categories come from the items you are about to add.
+Otherwise, find the pendings file (`PENDINGS.md` at the repo root, else `docs/PENDINGS.md`, else the project's named equivalent). **If none exists, create `PENDINGS.md` at the repo root by copying [pendings-template.md](pendings-template.md) verbatim** — header plus the `---`, nothing else. That header is load-bearing: never edit it, never drop it, never write items above it.
 
-Append each item under the right `##` category (`Segurança`, `Performance`, `Estrutural`, or a new one when none fits), as an `###` heading plus prose. Match the file's existing language and voice. One item = one self-contained demand a future session can pick up, act on, and delete when solved.
+**The file's own header outranks this skill.** A pendings file created from an older template carries a different shape (prose items under thematic `##` categories, no status markers). Do not convert it and do not mix formats: read the header, write what it prescribes. The rules below are the current template's shape and apply to files that carry the current header. Language and voice always follow the file.
 
-**Item shape** — prose, not a checklist; every item answers all three:
+Under the current header, one `##` section per plan/slice, **newest first**, titled `## <Area> — <Plan or slice name> (<YYYY-MM-DD>)`, followed by the plan file path so the context is recoverable. Add your section at the top; never reopen an old one for new work.
+
+**Entry shape** — a `-` bullet opening with a status tag, **3–6 lines**, carrying exactly three facts: what is pending · why it was not done · what unblocks it. Anything that is not one of the three is cut.
+
+- Status is one of `OPEN` (needs doing) · `GATED` (blocked on a decision or an external condition — **name the gate**) · `ACCEPTED` (knowingly left as-is; not a bug, do not re-flag it). There is no fourth status. Something genuinely resolved is **deleted**, never re-tagged `DONE`/`FIXED`/`CLOSED` — the file is not a graveyard.
+- Every identifier, number, path and error string stays exact. Terse means fewer words, never vaguer facts: `403 on getMarketplaceParticipations` survives, "an auth problem" does not.
+- No credential-rotation chores. Secret hygiene is handled outside this file.
+- An entry that touches another slice's domain is **recorded, not fixed unilaterally** — say whose it is and let the owner decide.
+- More than six lines means it is really two entries, or it belongs in the plan/spec — link there instead of re-explaining.
 
 ```markdown
-### Edge functions sem análise estática
+## Repo — CI static analysis (2026-08-20)
 
-**O que é.** `supabase/functions` — 88 functions, ~20.700 linhas — vai para produção sem
-typecheck e sem lint. Não há `deno.json`, nem CI, nem hook cobrindo o diretório.
+Plan: `docs/plans/2026-08-20-edge-static-analysis.md`
 
-**Por que não foi feito agora.** Ligar `deno check` é impossível hoje: 0 de 95 chamadas
-`createClient(` passam o genérico `<Database>`, então todo `.from()` colapsa para `never`.
-
-**Custo.** Tipar os clients primeiro (factory tipada em `_shared/`), o que obriga redeploy
-das 88 functions, e só então ligar o gate. Branch própria.
+- `OPEN` — **`supabase/functions` (88 functions, ~20.700 lines) deploys with no typecheck and no
+  lint**: no `deno.json`, no CI job, no hook covering the directory. _Why:_ `deno check` cannot be
+  turned on today — 0 of 95 `createClient(` calls pass the `<Database>` generic, so every `.from()`
+  collapses to `never`. _Unblocks:_ typed client factory in `_shared/` first (forces a redeploy of
+  all 88), then the gate. Own branch.
 ```
+
+An entry with no "why it was not done" is a task you should have done, not a pending. An entry with no unblock is a wish.
 
 An item with no "por que não foi feito" is a task you should have done, not a pending. An item with no cost estimate is a wish.
 

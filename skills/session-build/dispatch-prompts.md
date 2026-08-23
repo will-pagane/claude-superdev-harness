@@ -206,9 +206,13 @@ FINAL REPLY — exactly these lines, nothing else:
   PARKED: <one entry per deferred finding, or "none">
     Write each as a DRAFT PENDINGS ENTRY, not a note to yourself. It is the only thing that
     survives from you to whoever closes the branch, and they cannot re-open your investigation.
-    Each entry carries: file and line · the number you measured AND how you measured it · the
-    shape of the fix · the exposure left open meanwhile. "Found X, deferred" is worthless; an
-    entry someone can paste into the pendings file without re-deriving anything is the bar.
+    Open it with a status tag — `OPEN` (needs doing) / `GATED` (name the gate) / `ACCEPTED`
+    (knowingly left as-is) — and keep it to 3–6 lines carrying three facts: what is pending
+    · why it was not done · what unblocks it. Inside those three: file and line · the number
+    you measured AND how you measured it · the shape of the fix · the exposure left open
+    meanwhile. Identifiers, numbers, paths and error strings exact — terse never means vaguer.
+    "Found X, deferred" is worthless; an entry someone can paste into the pendings file
+    without re-deriving anything is the bar.
     MARK ANY PROOF THAT CANNOT BE REPRODUCED. If you established something in a window that has
     since closed — an equivalence checked before a migration that now makes the old path raise —
     say so in the entry. Otherwise the next session re-runs it, gets a failure, and concludes

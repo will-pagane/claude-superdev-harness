@@ -240,7 +240,7 @@ O que trava o merge, sem exceção: lint, build ou teste vermelho; migration da 
 
 Duas outras regras que valem citar:
 
-- **Pendência tem forma.** O que ficou para trás vira item escrito com três respostas obrigatórias — o que é, por que não foi feito agora, e quanto custa. Item sem "por que" é uma task que você deveria ter feito; item sem custo é um desejo. Nada adiado, nenhum arquivo: um arquivo de pendências vazio é ruído.
+- **Pendência tem forma.** O que ficou para trás vira item de 3 a 6 linhas, aberto por um status (`OPEN`, `GATED` com o portão nomeado, ou `ACCEPTED`), com três respostas obrigatórias — o que está pendente, por que não foi feito agora, e o que destrava. Item sem "por que" é uma task que você deveria ter feito; item sem destravamento é um desejo. Resolvido de verdade é **apagado**, nunca re-etiquetado `DONE` — o arquivo não é cemitério. Nada adiado, nenhum arquivo: um arquivo de pendências vazio é ruído.
 - **A limpeza se recusa a perder trabalho.** Sai do worktree primeiro, confere que não há commit fora da `main` nem arquivo sujo, e usa `git branch -d` minúsculo — o que se recusa a apagar trabalho não mergeado.
 
 ---
@@ -296,7 +296,7 @@ Cada regra existe porque a falha correspondente já aconteceu, e quase nenhuma d
 skills/session-build/SKILL.md              o fluxo inteiro, do brainstorm ao push
 skills/session-build/dispatch-prompts.md   o contrato que cada fork recebe
 skills/session-end/SKILL.md                o fechamento, portão a portão
-skills/session-end/pendings-template.md    o cabeçalho do arquivo de pendências
+skills/session-end/pendings-template.md    o cabeçalho e as regras do arquivo de pendências
 skills/session-handoff/SKILL.md            o template do bloco de handoff
 ```
 
