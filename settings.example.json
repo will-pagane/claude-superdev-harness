@@ -39,6 +39,19 @@
     ]
   },
 
+  "$comment_permissions": "OPCIONAL, e a escolha e sua. Sem estas entradas, 'gh pr create', 'gh pr merge' e 'git merge' caem no classificador de permissao, que responde diferente de uma execucao pra outra - e a session-end as vezes abre PR e mergeia sozinha, as vezes para e pergunta. Com elas, o comportamento fica deterministico. O CUSTO: permissions.allow NAO tem escopo por skill; o Claude Code nao sabe permitir um comando 'so quando a session-end estiver rodando'. Habilitar isto libera esses comandos em TODA sessao, e a regra 'nunca mergeie sem pedido explicito' do CLAUDE.md passa de trava do harness a convencao que o agente segue. Se preferir manter a trava, nao adicione: a session-end agora cai pra merge local quando o gh e recusado, entao a recusa custa uma frase e nao a run.",
+  "$permissions_optional": {
+    "allow": [
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git worktree remove:*)",
+      "Bash(git push origin --delete:*)"
+    ]
+  },
+
   "$comment_plugins": "superpowers vem do marketplace oficial, que ja e conhecido — so caveman e impeccable precisam ser declarados em extraKnownMarketplaces. './install.sh --third-party' faz os tres por CLI.",
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
