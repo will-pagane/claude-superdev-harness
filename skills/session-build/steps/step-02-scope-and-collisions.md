@@ -1,6 +1,6 @@
 # Step 2 — Scope, dependencies, collision plan
 
-**Invariants recap** (full text in `../SKILL.md`): no PR, no merge, no branch/worktree deletion, no tree-mutating recovery. Five human gates only — this step **is** gate 2, and it is the last one before the run goes autonomous. A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
+**Invariants recap** (full text in `../SKILL.md`): no PR, no delivery merge (the ONE exception is a peer-branch integration merge an orchestrator ordered by name), no branch/worktree deletion, no tree-mutating recovery. Five human gates only — this step **is** gate 2, and it is the last one before the run goes autonomous. A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
 
 This is the orchestration design. Do it before any branch exists.
 
@@ -58,10 +58,10 @@ If you cannot defend a transitive ruling, read `../references/collision-preceden
 
 ## 2.4 Lock plan
 
-Lock kinds are **open-ended**. The named ones are `migration`, `deploy`, `verify`, `file` — and a run will invent others. Add at least:
+Lock kinds are **open-ended but must be single hyphenated tokens** — `external-live-service`, not `external live service`, which parses as kind `external` holding the identifiers `live` and `service` and collides with every other `external …` lock. The canonical set is `migration`, `deploy`, `verify`, `file`, `external-live-service`, `local-stack`; a run inventing another follows the same one-token rule and `ledger.py` warns when it does not. Add at least:
 
-- **`external live service`** — Redis, a payments provider, an analytics endpoint, any third-party production surface. Observed: a fork probed a **production** key-value service because the dispatch enumerated only migrations and deploys, so the fork reasonably concluded nothing else needed a lock. The gap was the dispatch's, not the fork's.
-- **`local stack`** — a shared local database container. Starting one that is already running **silently reuses the previous holder's schema**, so a fork can verify green against another branch's database.
+- **`external-live-service`** — a key-value store, a payments provider, an analytics endpoint, any third-party production surface. Observed: a fork probed a **production** key-value service because the dispatch enumerated only migrations and deploys, so the fork reasonably concluded nothing else needed a lock. The gap was the dispatch's, not the fork's.
+- **`local-stack`** — a shared local database container. Starting one that is already running **silently reuses the previous holder's schema**, so a fork can verify green against another branch's database.
 
 A plan may legitimately *require* a lock on an external service. It must request it at plan time, not discover it at execution.
 

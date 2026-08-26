@@ -1,6 +1,6 @@
 # Step 4 — Build
 
-**Invariants recap** (full text in `../SKILL.md`): no PR, no merge, no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
+**Invariants recap** (full text in `../SKILL.md`): no PR, no delivery merge (the ONE exception is a peer-branch integration merge an orchestrator ordered by name), no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
 
 **If you are a fork, read `../references/fork-contract.md` first.** This file is the work; that file is who you are.
 
@@ -29,7 +29,7 @@ Hardened through the `codex-review` adversarial loop, invoked with **`rounds=unt
 **By whom, and how, depends on who owns the branch:**
 
 - **`N = 1`, this session builds:** run `superpowers:subagent-driven-development` to completion. The main session can spawn implementer subagents, so use them. This is not optional — a run that implemented inline instead had the user name the mechanism for it, and loaded SDD fifty minutes into the implementation phase.
-- **`N ≥ 2`, a fork builds:** **implement inline — SDD is unavailable to a fork.** A fork's boilerplate carries `"Do NOT spawn subagents with the Agent tool"` as a hard, non-overridable rule, so SDD's fan-out cannot run there no matter what the directive says. The fork works the plan **directly, one task at a time, with verification per task and nothing marked done without reading real output** — SDD's discipline, minus its parallelism. Budget for it: this is the slowest part of an `N ≥ 2` run.
+- **`N ≥ 2`, a fork builds:** **implement inline. SDD is not merely discouraged for a fork — it is unavailable, and no directive can enable it.** A fork's boilerplate carries `"Do NOT spawn subagents with the Agent tool"` as a hard, non-overridable rule, so SDD's fan-out cannot run there no matter what the directive says. The fork works the plan **directly, one task at a time, with verification per task and nothing marked done without reading real output** — SDD's discipline, minus its parallelism. Budget for it: this is the slowest part of an `N ≥ 2` run.
 
 **In both cases, override SDD's ending:** it finishes by calling `superpowers:finishing-a-development-branch`. Do **not** run it — it opens PRs and merges, which this skill forbids. Verification plus push replaces it.
 
@@ -61,8 +61,8 @@ Run the project's **full** lint, typecheck, build and test suite through `../scr
 | Lane | Proof required | Response |
 |---|---|---|
 | `regression` | The same gate is green on the merge base, and the failure signature is new | **Escalate.** This is human gate 3. |
-| `pre-existing-on-base` | Run the same gate on the base ref and compare failure signatures; or byte-compare the failing files against the base | Record it in the ledger with the evidence, report it at close-out, continue |
-| `environmental` | Name the missing or stale artifact — dependencies not installed, a stale dependency tree, a container holding another branch's state | Repair it **without touching branch content**, re-run, continue |
+| `pre-existing-on-base` | **Reproduce the same normalised failure on a clean checkout of the base ref.** Nothing weaker counts — byte-comparing the failing file against base is *not* proof, because an unchanged test can fail from a changed caller, config, schema or generated input. Byte comparison is admissible only alongside a stated argument that nothing in your diff can reach that file. | Record in the ledger with the reproduction, report at close-out, continue |
+| `environmental` | Name the missing or stale artifact — dependencies not installed, a stale dependency tree, a container holding another branch's state | Repair **without touching branch content**, then re-run. **Continue only if the identical gate now returns green**; if the same failure survives the repair, it was never environmental — re-triage it. |
 
 Only `regression` stops the run. Without these lanes the rule reads as an absolute, the correct action requires violating it, and every correct violation teaches that this skill's absolutes are advisory.
 

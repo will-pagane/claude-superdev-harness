@@ -74,8 +74,8 @@ Run the project's full lint, typecheck, build and test suite **yourself**, throu
 | Lane | Proof required | Response |
 |---|---|---|
 | `regression` | The same gate is green on the base and the failure signature is new | **Escalate.** Never migrate, deploy or merge off it. |
-| `pre-existing-on-base` | Run the same gate on the base ref and compare signatures; or byte-compare the failing files against the base | Record with evidence, report at Step 10, continue |
-| `environmental` | Name the missing or stale artifact — dependencies not installed, a stale dependency tree | Repair **without touching branch content**, re-run, continue |
+| `pre-existing-on-base` | **Reproduce the same normalised failure on a clean checkout of the base ref.** Byte-comparing the failing file against base is *not* proof on its own — an unchanged test can fail from a changed caller, config, schema or generated input; it is admissible only alongside a stated argument that nothing in your diff reaches that file. | Record with the reproduction, report at Step 10, continue |
+| `environmental` | Name the missing or stale artifact — dependencies not installed, a stale dependency tree | Repair **without touching branch content**, then re-run. **Continue only if the identical gate now returns green**; if the failure survives the repair it was never environmental — re-triage it. |
 
 Without these lanes the rule is an absolute that correct behaviour has to break: one run proved eight failures pre-existing over 35 minutes and merged, correctly; another repaired a stale dependency tree and continued, correctly. Each unlaned violation teaches that this skill's absolutes are advisory.
 
@@ -146,10 +146,10 @@ Hard-gated. Re-check immediately before merging: gates green or laned, every bra
 
 | Kind | Test | Response |
 |---|---|---|
-| `additive-vs-additive` | Both sides only add, at the same location, and neither removes or reinterprets the other's lines | Resolve in-pass by taking **both**. And **recompute every derived counter as a union — never pick a side's number.** |
+| `additive-vs-additive` | Three conditions, all required: (a) both sides only add and neither removes or reinterprets the other's lines; (b) **the added identifiers are provably disjoint** — no duplicated key, route, migration version, enum member or config field; (c) **order does not change meaning**. Then run the affected parser, linter or gate **on the union** and see it pass. | Resolve in-pass by taking **both**, and **recompute every derived counter as a union — never pick a side's number.** |
 | `semantic` | Either side changes the meaning of what the other relies on | **Escalate.** |
 
-A run that met six additive-vs-additive conflicts resolved them by hand, correctly, against a rule that then read "no conflicts → stop; never merge anyway".
+A run that met six additive-vs-additive conflicts resolved them by hand, correctly, against a rule that then read "no conflicts → stop; never merge anyway". **Text that merely looks additive is not enough**: two pure insertions can still collide on a duplicate key, a repeated migration version or two routes claiming one path. If any of the three conditions is unproven, it is `semantic`.
 
 Then merge per the project's strategy (**never `--squash`** on a history-preserving repo). **Do not pass `--delete-branch`** — the worktree still has the branch checked out and the delete will fail or strand the worktree.
 

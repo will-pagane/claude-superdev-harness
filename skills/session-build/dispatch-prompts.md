@@ -28,6 +28,24 @@ One per spec. Fill every `<...>` before sending.
 **Two dispatches per fork, not one.** A fork is one-shot — it reports once and its turn ends — and it cannot spawn subagents. So the prompt below carries **phases 1–3** and the fork stops at its `SURFACES` manifest, which is where the contract wanted it to stop anyway. The orchestrator then re-engages it with `SendMessage` for **phases 4–5** (§ Fork re-engagement), and every later directive is likewise a fresh message that revives it from its transcript with context intact.
 
 ```
+
+=== LAUNCH PAYLOAD (every field required; a missing one is `BLOCKED <field> missing from dispatch`) ===
+spec slug:            <spec-slug>
+spec file:            <abs path>
+branch:               <type>/<spec-slug>-<YYYYMMDD>
+worktree:             <ABSOLUTE path>
+ledger dir:           <ABSOLUTE path in the MAIN checkout - never relative, or your ledger
+                       lands inside your worktree and the lock sweep cannot see it>
+peer map:             <spec-slug -> agentId, for EVERY peer; resent whenever it changes>
+project profile:      merge_path=<pr|local-merge>  repo_shape=<app|docs-only|infra-no-suite|library>
+                      gate_order=<exact commands, in the order the hooks run them>
+                      deploy_wrapper=<script|none>  migration_tool=<cli|ci-applies-on-merge>
+dependency:           <independent | ordered on <slug> at <merge point> | total on <slug>>
+initial lock rulings: none yet          <- always. Rulings come from intersecting the surface
+                                           manifests, which do not exist until after codex-review.
+starting state:       GO PLAN            <- or `HOLD <reason>` for an unmet total dependency.
+                                           GO PLAN is NOT the later `GO <slug> phase 4`.
+=== END LAUNCH PAYLOAD ===
 You are the child session that owns exactly one spec, start to finish. You inherited this
 session's context — the brainstorm and all the specs are already known to you. What follows is
 binding, and overrides anything you would otherwise infer.
@@ -126,7 +144,14 @@ PHASE 2 — CODEX REVIEW
   MANDATORY LAST STEP: copy the converged $PLAN_FILE back over
   docs/superpowers/plans/<YYYY-MM-DD>-<spec-slug>.md. Implementation reads only that path; a
   hardened plan left in the run dir is worthless. Then send:
-    CODEX APPROVED ROUNDS <n> COPIED_BACK <yes|no>
+    CODEX APPROVED ROUNDS <n> RUNDIR <dir> PLAN <path> SHA <sha256>
+                                              # NEVER hand-written. Emit it with
+                                              #   scripts/ledger.py codex --dir <abs> --fork <slug> 
+                                              #     --rundir <dir> --plan <path> --rounds <n>
+                                              # which refuses unless the run dir holds an APPROVED
+                                              # log AND <rundir>/PLAN.md matches the canonical plan
+                                              # byte for byte - the proof the hardened plan was
+                                              # copied back over the path implementation reads.
   APPROVED is the only verdict that ends this phase. There is no cap to hit and nothing to
   escalate here — you do not proceed to Phase 3 on anything else.
 
@@ -284,8 +309,26 @@ Two unanswered pings → stop pinging. Read `fork-<slug>.md` and that worktree's
 ## § What the orchestrator owes after the fan-out
 
 - **Phase 1:** every promised plan file exists and is non-trivial.
-- **Phase 2:** every plan file's content actually changed after APPROVED (or the reviewer approved round 0 with no revisions — confirm, don't assume). `COPIED_BACK: no` → do the copy yourself before granting GO, or that fork implements the un-hardened plan.
+- **Phase 2:** the fork's `CODEX APPROVED … SHA …` line exists and was written by `scripts/ledger.py codex`, which refuses unless `<rundir>/PLAN.md` matches the canonical plan byte for byte. That match **is** the copy-back proof, so there is nothing left to confirm by eye — but a fork that reports approval with **no** such line has either skipped the review or skipped the copy-back, and implements the un-hardened plan. No line, no GO.
 - **Phase 3:** all `N` manifests intersected before the first GO. A GO granted before the last manifest arrived is a collision you chose not to see.
 - **Between 3 and 4:** every fork re-engaged by `SendMessage` (§ Fork re-engagement). A fork that stopped at its manifest is *finished*, not waiting — nobody revives it but you, and a fork you forgot to re-engage looks exactly like a fork that is quietly working.
 - **Phase 4:** exactly one migration lock and one deploy lock outstanding at any moment.
 - **Phase 5:** every branch pushed, every `PARKED` and `CUT` line collected into the ledger — they are the close-out report, and they are invisible to a compacted context.
+
+## § Launch payload — required fields (added by the 2026-08-26 restructure)
+
+A fork reads only `references/fork-contract.md` and `steps/step-04-build.md`. Everything else it needs must be in the dispatch prompt, and its contract tells it to report `BLOCKED <field> missing from dispatch` rather than reconstruct a missing field. Every initial dispatch carries:
+
+- spec slug, spec file path, branch name, **worktree absolute path**
+- the **absolute ledger directory in the MAIN checkout** (never relative - a relative path writes the fork ledger inside the worktree, where the lock sweep cannot see it)
+- the **full `spec slug -> agentId` map** for every peer, resent whenever it changes
+- the project profile: `merge_path`, repo shape, **gate order** (exact commands, in hook order), **deploy wrapper**, **migration tool**
+- the fork's dependency ruling and any marked merge point
+- **`initial lock rulings: none yet`** - say it explicitly. Rulings come from intersecting the surface manifests, which do not exist at launch, and a fork told to expect them will otherwise block waiting.
+- **the starting state, one of exactly two: `GO PLAN` or `HOLD <reason>`.** `GO PLAN` is NOT the later phase-4 grant; a fork that confuses them waits forever before planning.
+
+### Grant and release vocabulary
+
+- Grant a lock as **`GO <spec-slug> <kind> <identifiers...>`** - always four parts. A bare `GO` grants nothing the sweep can match and is reported as malformed.
+- A non-lock go-ahead is `GO <spec-slug> phase <n>`.
+- **`RELEASE <kind> <identifiers...>` releases any lock kind**, and is required for `verify`, `external-live-service`, `local-stack` and `file`. `APPLIED` and `DEPLOYED` implicitly release only the files and targets they name - a partially released batch keeps its remainder outstanding.

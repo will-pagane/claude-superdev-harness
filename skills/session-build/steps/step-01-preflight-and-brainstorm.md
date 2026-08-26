@@ -1,6 +1,6 @@
 # Step 1 — Preflight, then brainstorm to spec(s)
 
-**Invariants recap** (full text in `../SKILL.md`): no PR, no merge, no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading: measure immediately before the action it authorises. Gates run through `../scripts/gate.sh`. One step file at a time.
+**Invariants recap** (full text in `../SKILL.md`): no PR, no delivery merge (the ONE exception is a peer-branch integration merge an orchestrator ordered by name), no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading: measure immediately before the action it authorises. Gates run through `../scripts/gate.sh`. One step file at a time.
 
 ## 1.1 Preflight — before you read a single source file
 

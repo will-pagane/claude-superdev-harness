@@ -1,6 +1,6 @@
 ---
 name: session-build
-description: Use when the user wants an idea taken from conversation to implemented, pushed branches in one pass — "/session-build <ideia>", "builda isso", "brainstorma e implementa", "aprimore ao máximo", "faça as melhorias", "vamos mapear e escrever estas specs", "pega essa ideia e leva até a branch pronta". ALSO invoke mid-conversation without being asked: if this conversation has already produced a spec, a plan, or a code edit toward a multi-part build, stop and invoke this skill before continuing — you are already doing session-build work and the isolation it owns has not happened. Brainstorm produces one or more specs; one runs inline, several fork this session into one child session per spec with this session orchestrating. Stops at pushed branches — never opens a PR, never merges (that is /session-end). NOT for a spec-less one-line change, NOT for closing a branch that is already built, NOT for edits the user is directing and reviewing turn by turn.
+description: Use when the user wants an idea taken from conversation to implemented, pushed branches in one pass — "/session-build <ideia>", "builda isso", "brainstorma e implementa", "aprimore ao máximo", "faça as melhorias", "vamos mapear e escrever estas specs", "pega essa ideia e leva até a branch pronta". ALSO invoke mid-conversation without being asked: if this conversation has already produced a spec, a plan, or a code edit toward a multi-part build, stop and invoke this skill before continuing — you are already doing session-build work and the isolation it owns has not happened. Brainstorm produces one or more specs; one runs inline, several fork this session into one child session per spec with this session orchestrating. Stops at pushed branches — never opens a PR, never merges into the default branch (that is /session-end). NOT for a spec-less one-line change, NOT for closing a branch that is already built, NOT for edits the user is directing and reviewing turn by turn.
 ---
 
 # Session Build
@@ -9,7 +9,7 @@ Idea in → one or more verified, pushed branches out, in one pass.
 
 Pipeline: **brainstorm → spec(s) → plan → codex-review → implementation → verified push.**
 Migrations and deploys are **tasks inside the plan**, not a separate phase.
-Pull request and merge are **not part of this skill at all** — `/session-end` owns them, run by the user after their own verification.
+Pull request and **delivery** merge are **not part of this skill at all** — `/session-end` owns them, run by the user after their own verification. (The one merge this skill does perform is a fork taking a peer's branch on the orchestrator's explicit order; see invariant 1.)
 
 **Announce at start:** "Using session-build to take this idea from brainstorm to pushed branch(es)."
 
@@ -25,6 +25,35 @@ Pull request and merge are **not part of this skill at all** — `/session-end` 
 | **The prompt carries an already-written spec or plan** | step-02. Do not invent a ruling about whether the brainstorm still applies — say in one line that you are entering at scope confirmation because the spec already exists, and **re-validate its premises against the live tree** (step-01 owns that check; run it even though you skip the rest of step-01). A plan written in an earlier session was hardened against the code as it was then. |
 | **You were launched as a fork by an orchestrator** | Read `references/fork-contract.md`, then `steps/step-04-build.md`. Nothing else. Steps 1, 2, 5 and 6 belong to the orchestrator; reading them spends your context on work you are forbidden to do. |
 | **Mid-conversation drift** — this conversation already produced a spec, a plan, or a code edit toward a multi-part build, and this skill was never invoked | Stop. Say so in one line. Then step-01, treating everything already produced as input to be re-validated rather than progress to be preserved. The work so far happened in the shared checkout with no isolation; step-03 is what fixes that. |
+| **Conversational invocation** — the user explained the idea over several turns and then asked for a build in their own words ("builda isso", "faça as melhorias", "roda o session build") rather than typing the slash command | **step-01, at full strength.** This is the entry point that gets degraded, and the degradation is always the same: the conversation already feels like a brainstorm, so `superpowers:brainstorming` is skipped, and from there the rest of the chain falls with it. **A conversation is not a brainstorm.** It has produced no spec file, cleared no design gate, and had no premise checked against the live tree. Announce the chain (below) and run every link. |
+
+## The skill chain is not optional
+
+This skill is a **router over four other skills**. Its own text is the connective tissue; the value is in the links. The observed failure is not that a link is refused — it is that a link is quietly not run, most often when the user asked conversationally and the preceding turns *felt* like the work that link does.
+
+| Link | When | Substitutable by conversation? |
+|---|---|---|
+| `superpowers:brainstorming` | step-01 — **mandatory** for every idea-shaped entry: the slash command with a prompt, the no-prompt ask, conversational invocation, and mid-conversation drift | **No.** Its output is a committed spec file and a design the user approved at its gate. Turns of discussion produce neither. **Exempt, and only these:** the two entry points that begin at step-02 because a written spec already exists — and the exemption is conditional on re-validating that spec's premises against the live tree (step-01 §1.2), which is not optional. Nothing else exempts it. |
+| `superpowers:writing-plans` | step-04, every plan | **No.** The plan is a file at a known path that implementation reads. |
+| `codex-review` (`rounds=until-approved`) | step-04, every plan, before any code | **No.** A second model reading the plan is the point; your own confidence is not a substitute, and neither is the user having agreed. |
+| `superpowers:subagent-driven-development` | step-04, **`N = 1` inline builds only** | **No** — and it is **unavailable to a fork**, which implements inline instead. See below. |
+
+**Announce each link as you enter it, and write its ledger line when it completes.** Those lines are the evidence the link ran — a run that reaches implementation without them skipped something, whatever the transcript says.
+
+```
+PLAN <path> TASKS <n>
+CODEX APPROVED ROUNDS <n> RUNDIR <dir> PLAN <path> SHA <sha256>
+```
+
+The second is never hand-written. Emit it with:
+
+```
+scripts/ledger.py codex --dir <abs ledger dir> [--fork <slug>]     --rundir <codex-review run dir> --plan <canonical plan path> --rounds <n>
+```
+
+**`CODEX APPROVED` is evidence, not a claim.** `scripts/ledger.py` refuses the entry unless it reads `APPROVED ROUNDS <n> RUNDIR <dir> PLAN <path> SHA <sha256>` **and** the run directory exists, its `PLAN-REVIEW-LOG.md` records at least that many verdicts ending in `APPROVED`, and the plan file hashes to that digest — which is also what proves the hardened plan was copied back over the path implementation reads. You cannot satisfy this rule by asserting it.
+
+**Skipping a link is an escalation, not a judgement call.** Outside the one exemption named above, if a link genuinely does not apply, say which, say why, and say it before you proceed — do not let it lapse silently.
 
 **This is not fire-and-forget until step-02 closes.** Step 1 runs `superpowers:brainstorming`, which holds a hard gate on the user approving the design and reviewing each spec. Step 2 ends on the user confirming scope, order and collision rulings. A run launched and walked away from parks at the first question — correctly, but silently. Everything after that confirmation is autonomous.
 
@@ -36,7 +65,9 @@ A compressed recap of this block sits at the top of every step file. If a step f
 
 The invocation authorizes, **for the specs it produces only**: brainstorming, writing spec files, branch/worktree creation, forking this session, commits, applying migrations, deploying edge functions, and pushing branches.
 
-**Never authorized under this skill:** `gh pr create`, any merge, any force-push, any deletion of a branch or worktree, and any work outside the specs in scope. If the user asks for a PR mid-run, answer that `/session-end` is the skill for it and keep going.
+**Never authorized under this skill:** `gh pr create`, **any delivery merge** — into the default branch or any shared integration branch — any force-push, any deletion of a branch or worktree, and any work outside the specs in scope. If the user asks for a PR mid-run, answer that `/session-end` is the skill for it and keep going.
+
+**One merge is authorized, and only one: a peer-branch integration merge that the orchestrator has explicitly ordered with a `MERGE <branch> BEFORE <action>` directive.** That is how an `Ordered` dependency takes its predecessor's code and how an intersecting deploy set is resolved — the workflow does not function without it. It is bounded on all sides: only a fork performs it, only into its own feature branch, only on a directive naming the source branch, never toward the default branch, and never on the fork's own initiative. A fork that believes it needs a merge nobody ordered reports `BLOCKED` instead.
 
 **Also never authorized — tree-mutating recovery.** `git stash` with a merge or rebase in progress, `git reset --hard`, `git rm --cached -r .`, and `git checkout -- <path>` over uncommitted work destroy state you did not create and cannot restore. They are bypass-class actions: escalate instead. Observed: a `git stash push -u` issued with `MERGE_HEAD` live and six hand-resolved files staged, described afterwards by the session that did it as unnecessary risk.
 
@@ -118,6 +149,9 @@ Read fully and follow **`steps/step-01-preflight-and-brainstorm.md`**.
 - About to report a branch as done without having read the verification output yourself.
 - About to ask the user a question that is not one of the five gates above.
 - About to echo a secret the user pasted into a later command. It is written once, to the file that needs it, and never repeated in a command line, a log or a report.
+- About to implement with no `CODEX APPROVED` line in the ledger for that plan.
+- About to skip `superpowers:brainstorming` because the conversation already covered the idea.
+- About to tell a fork to run `subagent-driven-development`. Forks cannot spawn subagents — it is a hard, non-overridable rule of their boilerplate, so the directive cannot work and a fork that tries has simply lost the time. A fork implements **inline**, one task at a time.
 - A spec in the confirmed scope with no branch, or a branch with no pushed commits.
 - A plan file unchanged after its codex-review returned APPROVED.
 

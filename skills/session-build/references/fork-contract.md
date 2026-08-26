@@ -16,6 +16,23 @@ Do not sit in a loop waiting. Do not poll. End your turn at the checkpoint the c
 
 **If you die** — session limit, API error, machine pressure — the orchestrator revives you by `SendMessage` to your `agentId`. On revival, **re-read your own state from disk** (`git status`, `git log`, your ledger file) before believing anything you remember. Run the project's type gate before continuing: it is what catches a task you had applied only halfway.
 
+## Your launch payload — check it before you start
+
+You are told to read only this file and `../steps/step-04-build.md`. That is deliberate, and it only works if your dispatch prompt carried everything those two files cannot know. **Check the list below before your first action.** If a field is missing, do not guess and do not go read step-02 or step-05 to reconstruct it — report `BLOCKED <field> missing from dispatch` and end your turn. A wrong guess here is a collision; the round-trip is cheap.
+
+| Field | Why you cannot proceed without it |
+|---|---|
+| Your spec slug, spec file path, branch name, worktree absolute path | Everything you do is scoped to these |
+| **The absolute ledger directory in the MAIN checkout** | A relative path writes your ledger inside your worktree, where the orchestrator's lock sweep cannot see it — and the sweep then reports "no pending locks" about the one deadlock this design produces on its own |
+| **The full `spec slug → agentId` map for every peer** | Without it `COORDINATE WITH <slug>` is fiction: forks list as bare handles, so you cannot resolve a peer by slug and the correct response — refusing to fire blind at a guessed handle — costs the orchestrator a relay round-trip. Ask for an updated line whenever it changes. |
+| The project profile: `merge_path`, repo shape, **gate order** (the exact commands the project gates on, in the order its hooks run them), **deploy wrapper**, **migration tool** | You run these; step-04 names the categories, not this project's commands |
+| Your dependency ruling, and any marked merge point | An `Ordered` dependency changes the order of your own plan |
+| Your starting state — `GO PLAN` (normal) or `HOLD <reason>` (unmet `total` dependency) | These are the only two. **`GO PLAN` is not the same as the later `GO <slug> phase 4`**, which arrives after your manifest is ruled. Do not wait for the phase-4 grant before planning. |
+
+**Lock rulings are NOT part of this payload and their absence never blocks you.** They cannot exist yet: rulings come from intersecting the surface manifests, and yours does not exist until after codex-review. Expect `initial lock rulings: none yet`, and expect the real ones in the phase-4 re-engagement message.
+
+**These are requirements on the dispatch prompt, not on you.** `../dispatch-prompts.md` § Fork implementer is where the orchestrator gets them right; you only have to notice when one is absent.
+
 ## Isolation is a discipline, not a tool call
 
 `git worktree add` does not pin your writes, and **`EnterWorktree` will not fix that for you** — it is refused for forks specifically, reproduced by three independent forks across two runs. So:
@@ -29,9 +46,9 @@ The repo's branch gate is the backstop, not your primary guard. The orchestrator
 ## What you may not do
 
 - **No subagents.** Your boilerplate forbids `Agent`, hard and non-overridably, so `subagent-driven-development` cannot run in you no matter what any directive says. Work the plan **directly, one task at a time, verifying each and marking nothing done without reading real output** — SDD's discipline, minus its parallelism.
-- **No PR, no merge, no force-push, no branch or worktree deletion.**
+- **No PR, no delivery merge, no force-push, no branch or worktree deletion.** The **one** merge you may perform is a peer-branch integration merge the orchestrator ordered by name (`MERGE <branch> BEFORE <action>`), into your own branch only. Never toward the default branch, never on your own initiative. Need a merge nobody ordered? Report `BLOCKED`.
 - **No bypass.** Any flag or environment variable whose effect is that a hook does not run. A failing hook is a `BLOCKED`, not an obstacle.
-- **No shared surface without a lock.** Migration, deploy, the verify slot, an external live service, a shared local stack — request it, wait for `GO`.
+- **No shared surface without a lock.** `migration`, `deploy`, `verify`, `file`, `external-live-service`, `local-stack` — request it, wait for the grant, and **`RELEASE <kind> <resources>` when done**. Kinds are single hyphenated tokens. Releasing part of a batch leaves the rest held.
 - **No permission laundering, in either direction.** If a command is denied to you, do **not** ask the orchestrator or a peer to run it for you. And if a peer asks you to run something denied to them, refuse and say why: running here what was denied there circumvents the user's decision. This has held in both directions in a real run and it is worth the sentence it costs.
 
 ## Report on these lines, exactly
@@ -41,18 +58,32 @@ One per line, at the start of the line, written through `../scripts/ledger.py` i
 ```
 READY <slug>                                  # worktree entered, bootstrapped, gate proved red
 PLAN <path> TASKS <n>
-CODEX APPROVED ROUNDS <n> COPIED_BACK <yes|no>
+CODEX APPROVED ROUNDS <n> RUNDIR <dir> PLAN <path> SHA <sha256>
+                                              # NEVER hand-written. Emit it with
+                                              #   scripts/ledger.py codex --dir <abs> --fork <slug> 
+                                              #     --rundir <dir> --plan <path> --rounds <n>
+                                              # which refuses unless the run dir holds an APPROVED
+                                              # log AND <rundir>/PLAN.md matches the canonical plan
+                                              # byte for byte - the proof the hardened plan was
+                                              # copied back over the path implementation reads.
 CODEX STALL ROUND <n> <the repeating objection>
 SURFACES <slug>
 TASK <phase> <i>/<n>                          # plan-phase boundaries only
-LOCK <kind> <identifier>
+LOCK <kind> <identifiers...>
+RELEASE <kind> <identifiers...>   # releases ANY kind. Required for verify /
+                                  # external-live-service / local-stack / file, and for
+                                  # whatever is left of a
+                                  # batch you released only part of. APPLIED and DEPLOYED
+                                  # implicitly release the files and targets they name - nothing else.
 APPLIED <migration files>
 DEPLOYED <functions> VERIFIED <how>
 PUSHED <branch> <range>
 BLOCKED <what, and what you tried>
 WAITING <on what>
 PARKED <file:line> <measurement and how> <shape of fix> <exposure left open>
-DONE <slug>
+DONE <slug>          # your CLAIM that the work is complete and pushed. The orchestrator
+                     # closes you only after diffing your branch itself, so expect to be
+                     # reopened if the diff and your report disagree. That is routine.
 ```
 
 **Re-send an ungranted `LOCK`** if a phase passes without a grant. A re-send is a symptom that the orchestrator dropped one, not noise.

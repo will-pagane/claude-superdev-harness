@@ -1,6 +1,6 @@
 # Step 5 — Orchestration loop (N ≥ 2 only)
 
-**Invariants recap** (full text in `../SKILL.md`): no PR, no merge, no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
+**Invariants recap** (full text in `../SKILL.md`): no PR, no delivery merge (the ONE exception is a peer-branch integration merge an orchestrator ordered by name), no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
 
 The orchestrator writes no code, reviews no diffs line by line, and never implements a spec itself. Its whole job is traffic control.
 
@@ -42,24 +42,38 @@ Forks report with `SendMessage to: "main"`. Every fork also appends its checkpoi
 ```
 READY <slug>                                  # worktree entered, bootstrapped, gate proved red
 PLAN <path> TASKS <n>                         # plan written
-CODEX APPROVED ROUNDS <n> COPIED_BACK <yes|no>    # uncapped loop — the only verdict that ends it
+CODEX APPROVED ROUNDS <n> RUNDIR <dir> PLAN <path> SHA <sha256>
+                                              # NEVER hand-written. Emit it with
+                                              #   scripts/ledger.py codex --dir <abs> --fork <slug> 
+                                              #     --rundir <dir> --plan <path> --rounds <n>
+                                              # which refuses unless the run dir holds an APPROVED
+                                              # log AND <rundir>/PLAN.md matches the canonical plan
+                                              # byte for byte - the proof the hardened plan was
+                                              # copied back over the path implementation reads.
 CODEX STALL ROUND <n> <the repeating objection>    # information only; the fork keeps going
 SURFACES <slug>                               # manifest, see below
 TASK <phase> <i>/<n>                          # plan-phase boundaries only, never per task
-LOCK <kind> <identifier>                      # requesting a shared surface; kinds are open-ended
-APPLIED <migration files>                     # lock released
-DEPLOYED <functions> VERIFIED <how>           # lock released
+LOCK <kind> <identifiers...>                  # requesting a shared surface; kinds are open-ended
+RELEASE <kind> <identifiers...>               # releases ANY lock kind. Required for verify,
+                                              # external-live-service, local-stack, file - and
+                                              # for the remainder of a partially-released batch.
+APPLIED <migration files>                     # implicitly releases those migration files
+DEPLOYED <functions> VERIFIED <how>           # implicitly releases those deploy targets
 PUSHED <branch> <range>
 BLOCKED <what, and what you tried>
 WAITING <on what>
 PARKED <file:line> <measurement and how> <shape of fix> <exposure left open>
-DONE <slug>
+DONE <slug>                                   # the fork's CLAIM that its work is complete and pushed.
+                                              # NOT acceptance: only the orchestrator's own diff closes a fork (duty 4).
 ```
 
 **Orchestrator → fork directives:**
 
 ```
-GO                                  # dependency satisfied, or lock granted
+GO <spec-slug> <kind> <identifiers...>   # lock granted - THE grant format, always these four parts.
+                                    # A bare `GO` grants nothing the sweep can match and is
+                                    # reported as malformed. For a non-lock go-ahead
+                                    # (dependency satisfied, phases 4-5) use `GO <slug> phase <n>`.
 HOLD <reason>                       # stop before the next phase, wait
 COORDINATE WITH <fork name> ON <surface>   # talk to your peer directly, then report the agreement
 MERGE <branch> BEFORE <action>      # take the peer's work first
@@ -82,7 +96,7 @@ One database and one deploy runtime are shared by every fork; worktrees isolate 
 - **`LOCK verify` — one fork at a time through lint, typecheck, build, suite and push.** It exists because the database and the deploy runtime are serialised while **the CPU is shared and was not**, and because the two contentions fail in opposite ways: database contention fails loudly (the push is refused, someone is told something), CPU contention fails **silently** — the suite does not return a wrong answer, it returns *no* answer, and whoever is in a hurry reads the red as a defect in their own branch. **Verification that does not complete is not slow verification, it is absent verification.**
   Measured across two runs on one machine: load average **80.61**, peaking at **98.88**, on ~10 cores, up to 40 test/lint processes from eight forks; a `git push` stuck **43 minutes** in its pre-push hook; a lint-plus-typecheck that did not finish in 600 s on a branch touching no application code. The lock was introduced mid-run and load fell immediately.
   **Of everything that changes when `N` grows, this is the only one that scales non-linearly.** Below a threshold, more forks cost time; above it, verification stops producing a result at all. Three forks fit that machine; five plus two unrelated sessions did not.
-- **Other kinds exist** — `external live service`, `local stack`, `file`. Grant them on the same protocol. Do not treat the list as closed.
+- **Other kinds exist** — `external-live-service`, `local-stack`, `file`. Grant them on the same protocol, and release them with an explicit `RELEASE` (only `APPLIED`/`DEPLOYED` release implicitly, and only what they name). Do not treat the list as closed — but every kind is a **single hyphenated token**, or the sweep reads the extra words as identifiers.
 
 **Ordering two deploys does not resolve a deploy-set collision — only merging does.** Deploy-set derivation typically reads the **working tree**, not `HEAD`, so a fork deploys *its own* copy of every file in its set, including files it never touched whose current version lives only on a peer's branch — **overwriting the peer's deploy with its stale copy**. Swapping who goes first only inverts who gets overwritten.
 
