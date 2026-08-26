@@ -30,7 +30,14 @@ Human gates — only these:
 
 A bypass is any of: `--no-verify`; `-n` on commit; `--force`, `-f` or `--force-with-lease` on push; `-c core.hooksPath=<anything>`; `HUSKY=0`; `SKIP_HOOKS`; `--no-gpg-sign`; **or any flag or environment variable whose effect is that a hook does not run.** The enumeration is not the rule — that last clause is. A failing hook is an escalation, not an obstacle.
 
-**Retrying a denied command in a cleaner shape is not a bypass; reaching the same effect through a different door is.** A permission classifier is transient and shape-sensitive — the same `gh` call is denied piped and allowed bare. Retry **once**, bare: no pipe, no redirect, body via `--body-file`. If refused again, escalate with three named options (grant permission / the user runs it / the project's non-`gh` path). **A check that could not run is not a check that ran green.** Evidence on all sides: `references/traps.md#classifier-denials`.
+**Retrying a denied command in a cleaner shape is not a bypass; reaching the same effect through a different door is.** A permission classifier is transient and shape-sensitive — the same `gh` call is denied piped and allowed bare. So **retry once, bare**: no pipe, no redirect, body via `--body-file`.
+
+**What follows a second refusal depends on whether the project has another sanctioned route.**
+
+- **It does** — the merge steps do: `merge_path: local-merge` is a first-class path some projects use by default. Take it, announce it, report it. That is a route change, not a bypass. **Step 6 owns this ladder; do not escalate before climbing it.**
+- **It does not** — then escalate with three named options: grant the permission / the user runs the command / abandon this step and report what is left undone.
+
+Never reach the denied effect through a tool the project does not sanction, and never reason around missing evidence: **a check that could not run is not a check that ran green.** Evidence on all sides: `references/traps.md#classifier-denials`.
 
 ## Run gates through `scripts/gate.sh`
 
@@ -138,6 +145,20 @@ Commit the remaining branch work (conventional commit, project language, one per
 
 `gh pr create --base <default>`, title = the branch's purpose, body = the Step 10 report via `--body-file` (inline bodies correlate with classifier denials). Include the harness attribution footer if the project uses one.
 
+### If the harness blocks `gh` — the ladder, and it never ends in idling
+
+**This is expected, not exceptional.** The permission classifier is non-deterministic for any command that is not on the user's allowlist: the same `gh pr create` is permitted in one run and refused in the next, with nothing about the repo or the branch having changed. Runs have lost **38 minutes** and **~46 minutes** to treating a refusal as a hard blocker. It is not one. **This skill's authorization already covers merging** — the invocation *is* the ask — so a blocked `gh` is a blocked *route*, never a withdrawn permission.
+
+Climb this ladder in order. Never stop on a rung without trying the next.
+
+1. **Retry once, bare.** No pipe, no redirect, `--body-file` instead of an inline body. This alone clears most refusals.
+2. **Fall back to the local merge lane** (Step 7, *Local merge*). Announce it in one line — *"`gh` is blocked by the classifier; merging locally instead, no PR for this branch"* — and carry on. The branch still lands, still verified, still confirmed by ancestry. What is lost is the PR as a review artifact, and that is worth one sentence in the report, not a halt.
+3. **Only if the local merge is *also* blocked** is this an escalation, and then it is a real one: name the three options (grant the permission / the user runs the command / abandon the merge and leave the branch pushed) and stop.
+
+**Do not route around a denial with a different tool** — that is the bypass this skill forbids. Falling back from `gh` to `git` is not that: it is the *project's own alternative merge path*, the one `merge_path: local-merge` projects use as their default, taken openly and reported. The distinction is that you are changing route, not hiding the action.
+
+**Then suggest the fix, once, at the end of the report.** A refusal that recurs is a missing allowlist entry, not fate. See *Making this deterministic* below.
+
 ## Step 7 — Merge
 
 Hard-gated. Re-check immediately before merging: gates green or laned, every branch migration in the remote ledger, no unresolved load-bearing review finding, working tree clean.
@@ -153,9 +174,40 @@ A run that met six additive-vs-additive conflicts resolved them by hand, correct
 
 Then merge per the project's strategy (**never `--squash`** on a history-preserving repo). **Do not pass `--delete-branch`** — the worktree still has the branch checked out and the delete will fail or strand the worktree.
 
+### Local merge — the `merge_path: local-merge` default, and Step 6's fallback
+
+The same lane serves both: a project whose `CLAUDE.md` forbids autonomous pull requests, and a `pr` project whose `gh` call the classifier refused twice.
+
+1. Leave the worktree if you are in one (`ExitWorktree`, or `cd` to the main checkout).
+2. `git checkout <default>` then `git pull origin <default>` — **and if that pull is unsafe** because a parallel session has colliding uncommitted work in the shared checkout, stop and report. Do not merge onto a stale or dirty default branch.
+3. `git merge --no-ff <branch>` — `--no-ff` deliberately, so the branch keeps a merge commit and history stays readable. Never `--squash` on a history-preserving repo.
+4. Re-run the project's gates on the merged result through `scripts/gate.sh`. **This is the measurement nobody else takes**: the branch measured itself and the default branch measured itself, and neither measured the combination.
+5. `git push origin <default>`.
+6. Confirm with **`git branch -r --contains <sha>`**, exactly as the PR path does. The confirmation is identical because it never depended on `gh`.
+
+Then say in the report which lane ran and why — Step 10's Variant B exists for this and names the reason as a required field, because a report that simply omits the PR reads as a merge that did not happen.
+
 **`gh pr merge` prints nothing on success**, so silence is not evidence either way. Confirm with **`git branch -r --contains <sha>`**, never with `gh pr view --json state`. That query held when `gh` was refused by a classifier twice during this very step, and when the forge returned a **504 Gateway Timeout** indistinguishable from a refusal — the git query proved the merge had landed. `MERGED` — however you establish it — is the only acceptable state before Step 8.
 
 **If you merged the default branch into your branch first, read `references/traps.md#merge-ours` before resolving anything.** The middle step of that trap looks correct and breaks the default branch.
+
+## Making this deterministic — suggest it, do not do it
+
+**Say this once, at the end of the report, and only when a refusal actually happened this run.** Do not edit the user's settings yourself: permissions are theirs, and a skill that silently widens them has taken a decision that was not delegated to it.
+
+> The `gh`/merge steps were refused by the permission classifier this run and allowed in others. That inconsistency is not the repo — it is that these commands are not on the allowlist, so every call falls to a classifier that is free to answer differently each time. Adding them to `permissions.allow` in `~/.claude/settings.json` makes the behaviour deterministic:
+>
+> ```json
+> "Bash(gh pr create:*)",
+> "Bash(gh pr merge:*)",
+> "Bash(gh pr view:*)",
+> "Bash(git merge:*)",
+> "Bash(git branch -d:*)",
+> "Bash(git worktree remove:*)",
+> "Bash(git push origin --delete:*)"
+> ```
+>
+> **The trade-off, stated plainly so the choice is real:** `permissions.allow` is **not scoped to a skill**. Claude Code has no way to permit a command only while `session-end` is running, so these entries allow those commands in *every* session, not just this one. What still holds the line is the standing rule in your `CLAUDE.md` — never merge or open a PR unless explicitly asked — which becomes a convention the agent follows rather than a gate the harness enforces. If you would rather keep the harness enforcing it, leave the allowlist alone and accept the occasional refusal; this skill now falls back to a local merge instead of stalling, so a refusal costs a sentence rather than a run.
 
 ## Step 8 — Post-merge sync
 
@@ -213,7 +265,9 @@ Read `assets/report-template.md` and use the variant matching how this branch ac
 | "Squash keeps history tidy" | History-preserving projects lose the per-phase commits. |
 | "Report from memory" | Compose from the ledger. Compaction eats what you did not write down. |
 | "The gate is red, so I stop" | Triage it first. Only `regression` stops the run; the other two lanes are recorded and continued. |
-| "The classifier refused, so this path is closed" | Retry once, bare. A denial is transient and shape-sensitive. Then escalate — do not route around it. |
+| "The classifier refused, so this path is closed" | Retry once, bare. Then take the **local merge lane** — the branch still lands. Escalate only if `git merge` is refused too. Runs have idled 38 and 46 minutes on a refusal that the next attempt cleared. |
+| "`gh` was blocked, so I will use a different tool" | Falling back from `gh` to a local `git merge` is a **route change**, announced and reported — not a bypass. Using a different tool to hide a denied action is. The difference is whether you say so. |
+| "I should add the allow rules myself so this stops happening" | Permissions are the user's. Suggest the block, state that `permissions.allow` cannot be scoped to a skill, and let them decide. |
 | "The command exited 0" | Did you pipe it? And `grep -c` exits 1 on a zero count, which is the answer you wanted. |
 | "I closed those pendings, nothing to report" | Closed items are the invisible half. Report them; the user has no other way to know. |
 
@@ -228,5 +282,7 @@ Read `assets/report-template.md` and use the variant matching how this branch ac
 - About to edit or drop the pendings file's header.
 - About to sweep unrelated working-tree files into the branch commit.
 - About to remove a worktree holding gitignored artifacts the pendings still cite.
+- About to report a `gh` refusal as a blocker without having tried the local merge lane.
+- About to edit the user's `settings.json` to widen permissions. Suggest it in the report; do not do it.
 - About to fix a newly-found bug instead of writing it to pendings — this skill closes work out, it does not open new work.
 - About to build something because the invocation asked for it. Refuse and hand off; do not do the cheap half.

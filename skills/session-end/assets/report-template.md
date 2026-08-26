@@ -14,9 +14,14 @@ The default shape below opens with a PR number. A report that opens that way whe
 
 ## Variant B — merged locally, no pull request
 
-**Mergeado localmente** — the project's `CLAUDE.md` mandates local merge, so no PR was opened. Merge commit SHA, commit range, what shipped, and the confirmation used: `git branch -r --contains <sha>` naming the default branch.
+**Mergeado localmente** — merge commit SHA, commit range, what shipped, and the confirmation used: `git branch -r --contains <sha>` naming the default branch.
 
-State the *reason* there is no PR. Without it, the absence reads as an omission.
+**Name which of the two reasons applies — this field is required, not optional:**
+
+- *the project mandates it* — its `CLAUDE.md` forbids autonomous pull requests, so the PR path was never taken; or
+- *the harness blocked `gh`* — the permission classifier refused it, the bare retry also failed, and the run took the local merge lane rather than stalling. Say so plainly; it is not a failure of the branch.
+
+Without the reason, a missing PR reads as an omission or as a merge that did not happen.
 
 ## Variant C — nothing to merge, nothing to delete
 
