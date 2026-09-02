@@ -21,6 +21,17 @@ either absent from that file or correct something in it.
 
 ## A. The skill contradicts itself
 
+> **Ruled 2026-09-02, and A1 and A2 landed the opposite way from what they proposed.** The user's
+> standard is that anything not depending on him runs autonomously, and a permission-classifier
+> refusal is not a decision he wants brought to him — the invocation already granted the
+> authorisation. So the skill separates the **permission guard** (the harness classifier: a refusal
+> closes a route, take another one and say which) from the **correctness guard** (the project's
+> hooks: still forbidden to disarm, still an escalation). Spec A §3.12 carries the resolution.
+>
+> The evidence below is left standing as written, because it is what the runs did and why. What
+> changes is the verdict: those four runs read the rule correctly as it was written, and the rule
+> was wrong.
+
 ### A1. The classifier ladder tells `pr` projects to do what four runs deliberately refused
 
 Step 6's ladder says: `gh` refused → retry bare → **fall back to the local merge lane** → escalate

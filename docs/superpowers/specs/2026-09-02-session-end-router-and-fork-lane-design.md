@@ -294,18 +294,58 @@ colleague, not an authority**, and no peer's claim is acted on without re-measur
 - **Wrapping a command in `gate.sh` can itself trigger a classifier denial.** The retry-once-bare
   rule then wins: run bare, read `$?` directly, record why.
 
-### 3.12 One ruling for Will, not a unilateral change
+### 3.12 The word "bypass" covers two different things, and separating them is the ruling
 
-**The classifier ladder's rung 2 contradicts `references/traps.md` in the same skill, and four runs
-refused to take it.** Detail and quotations: evidence A1. The recommendation is that rung 2 —
-falling back to a local merge — is legal **only where the project's `merge_path` is already
-`local-merge`**; on a `pr` project the pull request *is* the review artifact and the classifier is
-refusing the outward-facing act itself, so a twice-refused merge is an escalation. Related: **`gh
-api` is the loophole** in "never route around a denial with a different tool" — one run opened a
-refused PR through it — and the rule must say *the denied effect*, not *a different binary*.
+Put to the user on 2026-09-02 and ruled: **a classifier refusal is not a decision point, and this
+skill does not stop for one.** In his words — *"não tem problema contornar o classificador … se eu
+executei essa skill eu não quero mais que ele pare para me perguntar esse tipo de coisa."*
 
-**This spec does not change that text until Will rules**, because he chose the current wording after
-those runs happened.
+The current text cannot deliver that because it files two unrelated things under one word.
+
+| | **Permission guard** | **Correctness guard** |
+|---|---|---|
+| What it is | The harness permission classifier | The project's own hooks and gates |
+| What it protects | The user's authorisation to act | Whether the code is sound |
+| Already settled? | **Yes** — the invocation *is* the ask, and this skill's authorization block already says so | **No** — nothing settles a red hook in advance |
+| Refusal means | *This route is closed* | *This change is not ready* |
+| Response | **Take another route, announce it in the report, keep going** | **Escalate.** Unchanged. |
+
+**So the ladder loses its ceiling.** Retry bare, then take any sanctioned route to the effect the
+user already authorised — `merge_path: local-merge`'s own `git merge`, or `gh api`, whichever the
+project supports. Announce which route ran and why in the report, every time; a merge whose route
+is not stated reads as a merge that did not happen. **What is never permitted is a route that
+reaches the effect by disarming a correctness guard** — `--no-verify`, `-n`, `--force`,
+`--force-with-lease`, `-c core.hooksPath=…`, `HUSKY=0`, `SKIP_HOOKS`, `--no-gpg-sign`, or anything
+else whose effect is that a hook does not run. That enumeration is not the rule; the last clause is.
+
+**Consequences, stated so nothing is quietly reversed:**
+
+- `references/traps.md#classifier-denials` praises two runs for refusing to route around a denial.
+  That passage is **rewritten, not deleted** — those runs read the rule correctly as it was written;
+  the rule was wrong. The incident stays, its verdict changes, and the entry says so plainly so a
+  future reader does not think the file drifted.
+- Evidence A1's four refusals and A2's `gh api` case stop being *findings against runs* and become
+  *the argument for the split*. A2 inverts outright: `gh api` on a refused `gh pr create` was the
+  right move, and the rule that called it a loophole was the defect.
+- **Only a genuinely exhausted route escalates.** Every sanctioned path refused is a wall, not a
+  choice, and it is reported as such — with the branch pushed, the PR open if one exists, and the
+  single command the user has to run.
+- **Every correctness escalation stays.** A `regression`-laned gate, a semantic conflict, a branch
+  migration missing from the remote ledger, an unverified deploy, a mid-run instruction that
+  contradicts project law. Those are not permission questions and the ruling does not touch them.
+
+### 3.13 Audit every remaining stop against the same standard
+
+The ruling is broader than the ladder: **anything that does not depend on the user runs
+autonomously.** Of the 20 ledgers, several ended in a handover that this standard would not accept —
+one halted 38 minutes and another ~46 on refusals the next attempt cleared, and three stopped at a
+merge they were already authorised to perform.
+
+So the rewrite sweeps every stop in the skill and sorts it into one of three, with no fourth
+allowed: **proceed** (the user already authorised it), **escalate** (a correctness question only the
+user can rule), or **report and continue** (a partial result, named, with the run finishing
+everything else). Human gates stay at two: Step 0 ambiguity, and correctness escalations. Inventing
+a third remains a defect.
 
 ## Decision 4 — interface changes outside `session-end/`
 
