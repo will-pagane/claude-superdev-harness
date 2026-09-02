@@ -156,13 +156,20 @@ So the rule is stronger than "watch it fail": **assert a distinctive full clause
 
 **Why this is first and alone:** four files in this surface exist in `C:/Users/willi/.claude/skills/` **only**, committed nowhere, with no history and no backup. Two are Will's Step 4 pendings rewrite from 2026-09-02. If they land as part of the restructure, the split's diff swallows them and nobody reviews them.
 
-**The spec names two files. This task copies four, and the extra two are not scope creep** — they are the same rule applied consistently. `ledger.py` and `step-06-closeout.md` are also un-propagated, are also in this fork's surface, and are *modified by Task 3 and Task 9*. Committing a modification on top of an uncommitted baseline destroys exactly what the baseline commit exists to protect.
+**The spec names two files. This task copies five, and the extra three are not scope creep** — they are the same rule applied consistently. `ledger.py` and `step-06-closeout.md` are also un-propagated, are also in this fork's surface, and are *modified by Task 3 and Task 8*. Committing a modification on top of an uncommitted baseline destroys exactly what the baseline commit exists to protect.
+
+> **`steps/step-02-scope-and-collisions.md` was added to this task after codex-review approved the plan, by orchestrator directive.** It carries the 2026-09-02 `PENDINGS-SOURCE` recording rule, it was in no fork's surface, and it was therefore the one file in the drift set that nothing in this run would have landed. The orchestrator granted it and re-measured the whole drift set to confirm nothing else is orphaned.
+>
+> **It is an UPDATE, not a create** — a framing I got wrong when I raised it. `git cat-file -e HEAD:skills/session-build/steps/step-02-scope-and-collisions.md` succeeds; the file is tracked and only the edit is uncommitted. Verified before writing this.
+>
+> No new review round: this is not a new design but the identical baseline-copy operation the review already approved for `SKILL.md` and `report-template.md`, applied to a third file with the same provenance, the same failure mode and the same verification shape. **Self-review of the added step:** it copies one tracked file from a read-only source, is covered by both existing identity checks (byte and normalised), adds no new interface, is committed in the same phase-1 commit whose whole purpose is text that lives on one disk, and touches nothing any later task modifies — `step-02` is not edited by Tasks 2 through 10, so no diff can swallow it later.
 
 **Files:**
 - Modify: `skills/session-end/SKILL.md`
 - Modify: `skills/session-end/assets/report-template.md`
 - Modify: `skills/session-build/scripts/ledger.py`
 - Modify: `skills/session-build/steps/step-06-closeout.md`
+- Modify: `skills/session-build/steps/step-02-scope-and-collisions.md` (granted post-approval)
 
 **Interfaces:**
 - Produces: the exact byte content every later task edits. Task 2 splits `SKILL.md` from this baseline, not from the repo's older copy.
@@ -181,7 +188,7 @@ cd "$WT" && printf '%s\n' session-build/scripts/ledger.py session-build/steps/st
 
 Expected: exit 0, no output. **A non-zero exit means the baseline is not what this plan measured** — either someone edited `~/.claude` during this run, or a file this plan expected to differ no longer does. Report `BLOCKED` with the diff; do not proceed on a guess.
 
-- [ ] **Step 2: Read the diff of each of the four files you are about to copy**
+- [ ] **Step 2: Read the diff of each of the five files you are about to copy**
 
 Do not copy blind. Read what changes, so the commit message can describe it and so a surprise surfaces now rather than at review.
 
@@ -189,17 +196,21 @@ Do not copy blind. Read what changes, so the commit message can describe it and 
 cd "$WT" && diff <(tr -d '\r' < skills/session-end/SKILL.md) <(tr -d '\r' < "$HOME/.claude/skills/session-end/SKILL.md")
 ```
 
-Repeat for `assets/report-template.md`, `scripts/ledger.py`, `steps/step-06-closeout.md`.
+Repeat for `assets/report-template.md`, `scripts/ledger.py`, `steps/step-06-closeout.md`, `steps/step-02-scope-and-collisions.md`.
 
-Expected shape: `SKILL.md` gains Step 4's "RECONCILE first, then collect" rewrite (Half A, the four-lane table, `stale-cause`), two *Common mistakes* rows and one red flag. `report-template.md` turns *Pendências fechadas* into *Pendências reconciliadas* with four counts. `ledger.py` adds `PENDINGS-SOURCE` to `BOOKKEEPING`. `step-06-closeout.md` adds the `PENDINGS-SOURCE` field to `handoff.md`.
+Expected shape: `SKILL.md` gains Step 4's "RECONCILE first, then collect" rewrite (Half A, the four-lane table, `stale-cause`), two *Common mistakes* rows and one red flag. `report-template.md` turns *Pendências fechadas* into *Pendências reconciliadas* with four counts. `ledger.py` adds `PENDINGS-SOURCE` to `BOOKKEEPING`. `step-06-closeout.md` adds the `PENDINGS-SOURCE` field to `handoff.md`. `step-02-scope-and-collisions.md` gains the ten-line block instructing a run to record `PENDINGS-SOURCE` per spec before proceeding.
 
-- [ ] **Step 3: Copy all four, verbatim**
+- [ ] **Step 3: Copy all five, verbatim**
 
 ```bash
 cd "$WT" && cp "$HOME/.claude/skills/session-end/SKILL.md" skills/session-end/SKILL.md
 cd "$WT" && cp "$HOME/.claude/skills/session-end/assets/report-template.md" skills/session-end/assets/report-template.md
 cd "$WT" && cp "$HOME/.claude/skills/session-build/scripts/ledger.py" skills/session-build/scripts/ledger.py
 cd "$WT" && cp "$HOME/.claude/skills/session-build/steps/step-06-closeout.md" skills/session-build/steps/step-06-closeout.md
+```
+
+```bash
+cd "$WT" && cp "$HOME/.claude/skills/session-build/steps/step-02-scope-and-collisions.md" skills/session-build/steps/step-02-scope-and-collisions.md
 ```
 
 - [ ] **Step 4: Prove the copy is identical, and say precisely what that means**
@@ -209,7 +220,7 @@ Round 1 caught an overclaim here: the first draft said "byte-exact" while compar
 **(a) Byte identity of the copy itself** — `cp` should have produced exactly the source bytes:
 
 ```bash
-cd "$WT" && rc=0; for f in session-end/SKILL.md session-end/assets/report-template.md session-build/scripts/ledger.py session-build/steps/step-06-closeout.md; do cmp -s "skills/$f" "$HOME/.claude/skills/$f" || { echo "BYTE-DIFF $f"; rc=1; }; done; exit $rc
+cd "$WT" && rc=0; for f in session-end/SKILL.md session-end/assets/report-template.md session-build/scripts/ledger.py session-build/steps/step-06-closeout.md session-build/steps/step-02-scope-and-collisions.md; do cmp -s "skills/$f" "$HOME/.claude/skills/$f" || { echo "BYTE-DIFF $f"; rc=1; }; done; exit $rc
 ```
 
 Expected: exit 0. If this fails but (b) passes, the difference is line endings only — record that explicitly rather than calling it identical.
@@ -217,7 +228,7 @@ Expected: exit 0. If this fails but (b) passes, the difference is line endings o
 **(b) Textual identity ignoring line endings** — the claim that survives the repo's `.gitattributes` normalisation:
 
 ```bash
-cd "$WT" && rc=0; for f in session-end/SKILL.md session-end/assets/report-template.md session-build/scripts/ledger.py session-build/steps/step-06-closeout.md; do diff -q <(tr -d '\r' < "skills/$f") <(tr -d '\r' < "$HOME/.claude/skills/$f") >/dev/null || { echo "TEXT-DIFF $f"; rc=1; }; done; exit $rc
+cd "$WT" && rc=0; for f in session-end/SKILL.md session-end/assets/report-template.md session-build/scripts/ledger.py session-build/steps/step-06-closeout.md session-build/steps/step-02-scope-and-collisions.md; do diff -q <(tr -d '\r' < "skills/$f") <(tr -d '\r' < "$HOME/.claude/skills/$f") >/dev/null || { echo "TEXT-DIFF $f"; rc=1; }; done; exit $rc
 ```
 
 Expected: exit 0. Both loops accumulate `rc` rather than returning the last iteration's status.
@@ -239,13 +250,13 @@ cd "$WT" && test "$(git branch --show-current)" = "refactor/session-end-router-f
 Expected: exit 0. A non-zero exit means you are not on this fork's branch — **STOP**, and do not commit. Round 7: printing the branch name cannot enforce the rule that this run never commits on the default branch.
 
 ```bash
-cd "$WT" && test "$(git branch --show-current)" = "refactor/session-end-router-fork-lane-20260902" && git add skills/session-end/SKILL.md skills/session-end/assets/report-template.md skills/session-build/scripts/ledger.py skills/session-build/steps/step-06-closeout.md && git commit -F- <<'EOF'
+cd "$WT" && test "$(git branch --show-current)" = "refactor/session-end-router-fork-lane-20260902" && git add skills/session-end/SKILL.md skills/session-end/assets/report-template.md skills/session-build/scripts/ledger.py skills/session-build/steps/step-06-closeout.md skills/session-build/steps/step-02-scope-and-collisions.md && git commit -F- <<'EOF'
 docs(skills): land the session-end text that lived only on one disk
 
-Four files were edited in ~/.claude and committed nowhere: session-end's
+Five files were edited in ~/.claude and committed nowhere: session-end's
 Step 4 rewrite (reconcile before collect, the four lanes, stale-cause),
 the report template's four reconciliation counts, and the PENDINGS-SOURCE
-plumbing in session-build's ledger.py and step-06.
+plumbing in session-build's ledger.py, step-06 and step-02.
 
 They land here unchanged and alone, before the restructure touches them.
 A 36KB file reshaped into ten is already hard to review; this text hidden
