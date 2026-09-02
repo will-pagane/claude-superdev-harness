@@ -30,6 +30,27 @@ Only after Step 7 confirmed `MERGED`.
 
 Details and the runs behind all three: `references/traps.md#cleanup`.
 
+## Production is not "up", it is "running what we merged"
+
+**Verify production serves the **merged SHA, by identifier** — the deployment id, the image version, the commit the host reports — not that a health endpoint answers 200.
+
+Measured: a post-merge deploy failed, its cause was fixed, and the host redeployed **the old image** on its own. Production was healthy and still not running the merged code. *"It is up and green"* and *"it is running the code we merged"* are different claims, and only the second was the goal. The run caught it, re-ran the failed job, and confirmed the new version by id.
+
+## Three cleanup facts the runs paid for
+
+**`git branch -d` has two predicates, not one.** It measures against the branch's **upstream** *and* against the **HEAD of the checkout you run it in**. Different runs hit each half, and neither refusal means "use `-D`":
+
+- Upstream behind → prove containment with `git log <branch> --not origin/<default>` empty, **delete the remote ref first**, then `-d` succeeds on its own.
+- The shared checkout's HEAD is a peer's branch and cannot be moved → create `git worktree add --no-checkout --detach <merge-sha>` and run `-d` from there. **The deletion succeeding there is itself the containment proof.** A `--no-checkout` tree only *looks* dirty, so removing it afterwards needs no `--force`.
+
+**`-D` keeps its prohibition, with exactly one escape.** A branch whose commit is not an ancestor of the default branch but whose **tree is identical** — `git diff origin/<default> <branch>` empty — carries no content to lose. Record that tree-level proof, per file, in the ledger. Never `-D` on age, on a hunch, or to clear a refusal you have not diagnosed.
+
+**`git worktree remove` fails for reasons that are not git refusals.** `Permission denied`, `Directory not empty`, `Filename too long` — on Windows these are filesystem path limits over deep dependency trees, and `git worktree list` will show the worktree **already deregistered**. Confirm that, run `git worktree prune`, then remove the directory.
+
+**And confirm removal by listing, not by the exit code.** One run's background `rm -rf` **exited 0 while leaving the directory in place**, and it was caught by listing the directory. That run then left a lock-held cache tree alone on purpose — gitignored, regenerable, and *"killing processes blind to remove cosmetic residue is a worse trade."*
+
+**Partial cleanup is a legitimate terminal state.** If the default branch cannot be made current safely — a peer holds it, or pulling would collide with their uncommitted work — stop, leave the branch, and report. To resume: confirm the peer released it, `git checkout <default>` and `git pull`, prove containment with `git merge-base --is-ancestor <sha> HEAD`, then delete the remote ref and the local branch. One run closed exactly this way, a turn later. It is not a failure and it is never a reason to force anything.
+
 <!-- split-addition -->
 
 ## Common mistakes
