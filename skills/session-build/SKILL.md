@@ -81,6 +81,8 @@ The invocation authorizes, **for the specs it produces only**: brainstorming, wr
 
 Nothing else. Do **not** ask "should I continue?" between steps. **Inventing a sixth gate is a defect**, and it is the most common one: it reads as caution and costs the user a round-trip they never agreed to. And do not put a decision to the user that they have told you they cannot evaluate — state the assumption and keep building.
 
+**One question is asked that is not on this list, and it is not a gate: the visual-companion offer at step-01 §1.3.** It is not a gate because it does not block — it rides in the message that opens the brainstorm and the run continues on either answer, including no answer. Sending it as a message of its own, or waiting on it, converts it into the sixth gate this list forbids.
+
 ### 3. Never bypass a gate — and here is what counts as one
 
 A bypass is any of: `--no-verify`; `-n` on commit; `--force`, `-f` or `--force-with-lease` on push; `-c core.hooksPath=<anything>`; `HUSKY=0`; `SKIP_HOOKS`; `--no-gpg-sign`; **or any flag or environment variable whose effect is that a hook does not run.** The enumeration is not the rule — that last clause is. If your command contains one, stop and escalate. A failing hook is an escalation, not an obstacle.
