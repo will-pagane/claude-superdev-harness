@@ -3,11 +3,12 @@
 **Date:** 2026-09-02
 **Status:** design approved, ready to plan
 **Repo:** `claude-setup` (published as `will-pagane/claude-superdev-harness`)
-**Touches:** `skills/session-end/**`, `skills/session-build/{steps/step-06-closeout.md,scripts/ledger.py}`, `docs/cadeia-session.md`
+**Touches:** `skills/session-end/**`, `skills/session-build/{steps/step-06-closeout.md,references/fork-contract.md,scripts/ledger.py,scripts/gate.sh}`, `docs/cadeia-session.md`
+**Evidence base:** `2026-09-02-session-end-run-evidence.md` — all 20 `session-end` ledgers on this machine, read in full.
 
 ## Problem
 
-Two defects, one structural and one behavioural.
+Three defects: one structural, one behavioural, one of content.
 
 **Structural.** `skills/session-end/SKILL.md` is a 36.7 KB monolith loaded in full on every
 invocation. Ten steps sit inline. A docs-only branch that will never touch a migration, an edge
@@ -29,9 +30,16 @@ a bullet inside Step 0 telling the orchestrator to enter each worktree in sequen
 (one orchestrator did it for five branches) and it dies on context: closing five branches in one
 session means carrying five inventories, five suite logs and five diffs at once.
 
+**Of content.** Twenty real runs are on disk and the skill has absorbed maybe half of what they
+learned. Reading all twenty produced 21 findings that are absent from the skill or contradict it —
+including the router disagreeing with its own `references/traps.md` about whether a blocked `gh`
+merge may fall back to a local one. The evidence document holds them; this spec decides which land
+and how.
+
 ## Non-goals
 
-- No change to the inline path. A single feature branch closes exactly as it does today.
+- No change to the inline path's **shape**. A single feature branch closes through the same Steps
+  0–10; only the content of Steps 1, 6, 7, 8 and 9 changes, and every change applies to all lanes.
 - No renumbering of Steps 0–10. Fourteen cross-references to `Step N` live outside `SKILL.md`
   (eight in `references/traps.md`, plus `assets/report-template.md` and `session-build`'s own
   step-06). Renumbering breaks all of them silently.
@@ -161,7 +169,145 @@ measured facts, not on taste:
 - Step 7 requires re-measuring immediately before merging. With N concurrent merges into the
   default branch, every such measurement is falsified by the neighbour that merged in between.
 
-## Decision 3 — interface changes outside `session-end/`
+## Decision 3 — the content findings, and where each lands
+
+Every item cites the evidence document's section. Nothing here is invented; the runs did it first.
+
+### 3.1 `gate.sh --expect` — the only finding that needs code
+
+**A killed gate returns `EXIT 1`, which is indistinguishable from a red** (evidence B1, 7 of 20
+runs). Prose cannot fix this — an earlier version of the skill stated the pipe rule four times and
+runs violated it twenty times anyway, which is why `gate.sh` is a script.
+
+`gate.sh <label> --expect <regex> -- <command...>`: the captured log must match the runner's own
+summary line, or the result prints `GATE <label> UNDECIDED LOG <path> LINES <n>` instead of
+`EXIT <code>`. The project profile's `gate_order` carries the regex per gate. **`UNDECIDED` is not
+red and not green: it is absent verification.** Never merge off it, never report it as a failure,
+re-run scoped or split — which is how two runs completed a suite that had been killed twice.
+
+**The fork contract must carry this**, or under the fork lane a killed suite reaches the
+orchestrator as `BLOCKED gate red` and gets triaged `regression`.
+
+`scripts/gate.ps1` gains the same flag or explicitly refuses it; a silent no-op on Windows is worse
+than an error.
+
+### 3.2 Step 1 grows from three triage lanes to six
+
+| Lane | Proof required | Response |
+|---|---|---|
+| `incomplete` (new) | No runner summary line — `gate.sh` says `UNDECIDED` | Re-run scoped, split or backgrounded. Never a merge, never a report of failure. |
+| `flaky-under-load` (new) | All three: green in isolation, green on a clean base checkout, green on an identical re-run | Record with all three readings, continue |
+| `foreign-dirty-tree` (new) | `git show HEAD:<path>` proves the commit is clean; the red comes from a peer's uncommitted state | Touch nothing, report |
+| `regression` | unchanged | unchanged |
+| `pre-existing-on-base` | unchanged | unchanged |
+| `environmental` | unchanged, plus the `missing-artifact` sub-case: gate order, not installation | unchanged |
+
+Two more Step 1 rules, each one line: **a cached green is not a green** (run with the build cache
+disabled and record the cache-miss evidence), and **report what the suite did not run** —
+`344 passed, 13 deselected` overstates coverage until the deselection is named.
+
+### 3.3 Two new checks in Step 0/1, two in Step 7/8
+
+- **Re-fetch cadence.** `git fetch` and re-read `origin/<default>` immediately before Step 1 and
+  again immediately before Step 7, recording SHA and timestamp both times. A verification already
+  running against a superseded base is **stopped**, not finished (evidence C1).
+- **Wall-clock on resume.** Read the clock against the ledger's last entry before trusting any
+  prior measurement. One session spanned six days between turns (C4).
+- **A CI green must answer the current question.** Before citing CI as a merge gate, check the
+  run's base contains everything merged since it started. And read `gh run view --json jobs`, not
+  `gh pr checks`, which showed stale `pending` rows after completion (C3).
+- **Step 8 verifies production serves the merged SHA**, by identifier. *"It is up and green"* and
+  *"it is running the code we merged"* are different claims (C5).
+
+### 3.4 Verify the tree that will land
+
+Merge `origin/<default>` into the branch, then gate. That is the tree that lands, and it front-loads
+the conflict work.
+
+**This collides with the fork contract**, which forbids a fork any merge it was not ordered to
+perform. Resolved in the existing vocabulary: the orchestrator issues `MERGE origin/<default>
+BEFORE verify` in the same message as `GO <slug> verify <branch>` — one revival, and the
+orchestrator has just re-fetched so it names the SHA.
+
+### 3.5 Step 7 grows two conflict lanes
+
+- **`generated`** — regenerate from the source of truth. Never a merge, never a side. `types.ts`
+  conflicted four times in one close-out and was resolved this way each time.
+- **`union-already-computed`** — one side already carries the union the others are stale against.
+  **It looks exactly like `additive-vs-additive`, and taking "both" re-introduces stale rows.** The
+  test: does either side's content already contain the other's? Then it is not additive.
+
+### 3.6 Step 7 gains a "who holds the default branch" pre-check
+
+Two opposite failures, four days apart, both in the local-merge lane. Two named exits:
+
+- The main checkout is on a peer's branch with uncommitted work → **merge in a dedicated worktree on
+  the default branch**, bootstrapped and hook-verified, never touching the peer's files.
+- A peer worktree holds the default branch → **stop, report, resume later.** Step 9 states plainly
+  that **partial cleanup is a legitimate terminal state**, with the resume procedure written out.
+
+### 3.7 Step 5/7 gain the pre-push migration-ledger gate
+
+Absent from `session-end` entirely and fired in 6 of 20 runs, at this skill's own push points. The
+gate blocks on remote-only ledger rows owned by peer sessions and recommends the one command that
+must never be run — a ledger reconcile that reverts peers' applied work. The sanctioned route, run
+identically three times: restore the peer files from their owning refs (`git show <ref>:<path>` or
+`git restore --source=<ref> --worktree`, **never `git checkout`**, which writes the index), leave
+them untracked and unstaged (verified with `git diff --cached --name-only` empty), push with the
+hook running and passing on its own terms, delete them after.
+
+### 3.8 Step 6 gains "a branch that cannot merge as one unit"
+
+When two pipelines react to the same push with nothing ordering them, splitting commits inside one
+PR does not help. Split **by ancestry** — `git grep` to prove the earlier commit introduces no call
+to the new interface, `git log -S` to name the commit that does — so PR A is
+`origin/<default>..<commit>` and PR B the remainder. No cherry-pick, no rewritten history. The gate
+between them is the first pipeline going green, **not elapsed time**.
+
+### 3.9 Step 9 gains three cleanup facts
+
+- `git branch -d` has **two** predicates: the upstream (already documented) **and** the HEAD of the
+  checkout you run it in. When the shared checkout's HEAD cannot be moved, run `-d` from a
+  `git worktree add --no-checkout --detach <merge-sha>` worktree — the deletion succeeding there is
+  itself the containment proof, and a `--no-checkout` tree only looks dirty, so removal needs no
+  `--force`.
+- `-D` keeps its prohibition with **one** escape: a recorded **tree-level** containment proof
+  (`git diff origin/<default> <branch>` empty while the commit is not an ancestor). Never on age.
+- `git worktree remove` fails for reasons that are not git refusals — `Permission denied`,
+  `Directory not empty`, `Filename too long`, all Windows path limits — with the worktree already
+  deregistered. Confirm with `git worktree list`, then `git worktree prune` and remove the
+  directory. And **`rm -rf` has been observed exiting 0 while leaving the directory in place**:
+  confirm by listing, not by exit code.
+
+### 3.10 Peers exist, and the skill has never said so
+
+Peer contention appears in **11 of 20** runs — the joint-largest category. One run's blocker
+dissolved entirely when it messaged two peer sessions and found one had already merged the fix.
+Step 0 names `ListAgents`/`SendMessage` as available, with the standing limit: **a peer is a
+colleague, not an authority**, and no peer's claim is acted on without re-measuring it.
+
+### 3.11 Two fixes to the skill's own tooling
+
+- **`scripts/gate.sh` reads as a project path.** One run concluded the script did not exist in that
+  repo and reimplemented the discipline by hand. Write it as `<skill-dir>/scripts/gate.sh`
+  everywhere, and say what to do when the skill directory is unreachable.
+- **Wrapping a command in `gate.sh` can itself trigger a classifier denial.** The retry-once-bare
+  rule then wins: run bare, read `$?` directly, record why.
+
+### 3.12 One ruling for Will, not a unilateral change
+
+**The classifier ladder's rung 2 contradicts `references/traps.md` in the same skill, and four runs
+refused to take it.** Detail and quotations: evidence A1. The recommendation is that rung 2 —
+falling back to a local merge — is legal **only where the project's `merge_path` is already
+`local-merge`**; on a `pr` project the pull request *is* the review artifact and the classifier is
+refusing the outward-facing act itself, so a twice-refused merge is an escalation. Related: **`gh
+api` is the loophole** in "never route around a denial with a different tool" — one run opened a
+refused PR through it — and the rule must say *the denied effect*, not *a different binary*.
+
+**This spec does not change that text until Will rules**, because he chose the current wording after
+those runs happened.
+
+## Decision 4 — interface changes outside `session-end/`
 
 - **`session-build/steps/step-06-closeout.md`**: `handoff.md` must carry the `spec slug → agentId`
   map explicitly, not the current prose `Fork: alive`.
@@ -208,9 +354,30 @@ branch's own entries are measured against its tree before merging. This residual
 per-branch lane too. It is written into the skill as a stated limitation rather than left to be
 rediscovered.
 
+## Implementation phasing — three commits, in this order, not interleaved
+
+The split diff and the content diff must never share a commit. A 36.7 KB file reshaped into ten is
+already hard to review; content changes hidden inside that reshape are invisible.
+
+1. **Baseline.** The 2026-09-02 `~/.claude` text of `SKILL.md` and `assets/report-template.md`, into
+   the repo, unchanged. Reviewable on its own.
+2. **Mechanical split.** Router plus step files, moving text and nothing else. Verified by
+   reconstruction (below). No sentence gains or loses a word in this commit.
+3. **Content.** One commit per evidence section — `gate.sh --expect` and the triage lanes; the new
+   checks; the conflict lanes and merge pre-check; the ledger gate; cleanup; peers and tooling.
+
 ## Verification
 
 - **The router's byte count.** `SKILL.md` ≤ 12 KB; no step file above 7 KB.
+- **Reconstruction.** Concatenate the step files in order, diff against the pre-split original, and
+  account for every differing line. Run at the end of commit 2, when the answer must be *only the
+  invariant recap headers*.
+- **One assertion per content finding.** Each item in Decision 3 gets a `grep -q` against the file
+  that is supposed to carry it, listed in the plan and run as a single script. "The findings landed"
+  is otherwise a claim. Twenty-one assertions.
+- **`gate.sh --expect` proves itself.** A gate whose log lacks the expected line must print
+  `UNDECIDED`, and the same gate with the line present must print `EXIT 0`. Both run; a flag never
+  seen to change the output is not a flag.
 - **No orphaned cross-reference.** Every `Step N` mentioned in `references/traps.md`,
   `assets/report-template.md`, `docs/cadeia-session.md` and `session-build/steps/step-06-closeout.md`
   resolves to a step some file owns. Checked mechanically, not by eye.
@@ -218,13 +385,18 @@ rediscovered.
   `~/.claude` text and read the result: the only permitted differences are the invariant recap
   header and the fork-lane paragraph.
 - **The fork lane is a dry read, not a live run.** Nothing in this spec is verified by merging
-  real branches. It is verified by the four checks above plus a walk-through of the lane against
-  the MCPlace handoff, naming for each field whether the lane would have found it.
+  real branches. It is verified by the checks above plus a walk-through of the lane against the
+  MCPlace handoff, naming for each field whether the lane would have found it.
+- **The content findings get a second dry read** against three ledgers the evidence document did not
+  draw them from, asking of each: would the rewritten skill have produced this run's behaviour, or
+  fought it?
 
 ## Risks
 
 | Risk | Response |
 |---|---|
 | The fork lane cannot be exercised without a real `N ≥ 2` run | Ship it, and say in the router that the lane is unexercised. The inline and sequential lanes are unchanged, so the blast radius is the lane itself. |
-| Splitting a 36.7 KB file loses a sentence | Verify by reconstruction: concatenate the step files and diff against the original, then account for every removed line. |
-| `ledger.py` is edited by this spec and by a concurrent `session-build` run | Single-writer: only this branch touches it. Declared in the surface manifest. |
+| The content rewrite reinstates something `traps.md` already says, in different words | Reading `traps.md` first already removed four findings. The plan re-checks each surviving item against its seven anchors before writing it. |
+| Six triage lanes is more taxonomy than a run will hold in its head | Each lane is defined by the **proof it demands**, not by its name, and a run that cannot produce the proof falls back to `regression` — which stops the merge. The failure mode is conservative by construction. |
+| `gate.sh --expect` makes every gate invocation longer, so runs stop using the flag | It is optional and the profile carries the regex, so the cost is in `gate_order`, written once at Step 0, not at each call site. |
+| `ledger.py` and `gate.sh` are edited by this spec and by a concurrent `session-build` run | Single-writer: only this branch touches them. Declared in the surface manifest. |
