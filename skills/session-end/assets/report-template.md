@@ -47,11 +47,16 @@ Migrations applied (with ledger confirmation) and functions deployed (with how e
 
 Each item written to the pendings file, with its file path.
 
-## Pendências fechadas
+## Pendências reconciliadas
 
-Each item **removed** from the file because this session resolved it.
+Step 4's Half A, reported as **four counts, every one of them stated even when zero** — a reconciliation with no residual bucket cannot tell you it missed something:
 
-Easy to omit, because the report is built from what you wrote and closing an item leaves nothing to point at — but on a cleanup-heavy branch it is often the larger half of the work. One close-out reported 13 opened and said nothing about **17 closed**, until the user asked outright.
+- **fechadas** — entries deleted because this session resolved them, listed by heading.
+- **reescritas (`stale-cause`)** — entries whose stated cause or unblock stopped being true while the defect survived. **Say what the old text claimed and why it was wrong**, because this is the lane that silently converts a live bug into a closed one.
+- **atualizadas** — entries whose numbers, paths or branch-state claims were corrected in place.
+- **intocadas** — the count your diff does not reach.
+
+Closing is easy to omit, because the report is built from what you *wrote* and a deleted entry leaves nothing to point at — yet on a cleanup-heavy branch it is often the larger half of the work. One close-out reported 13 opened and said nothing about **17 closed**, until the user asked outright. A later one merged four branches, deployed, drained a production queue, and left three entries describing a world that had ended two hours earlier — one of which would have made the next reader close a bug that was still live.
 
 ## Verificação
 

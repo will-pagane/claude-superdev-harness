@@ -110,9 +110,31 @@ For every changed function in the inventory, deploy through the project's wrappe
 
 Note in the ledger that this deploy will likely be **undone by the merge** (Step 8 redeploys).
 
-## Step 4 — Pendings
+## Step 4 — Pendings: RECONCILE first, then collect
 
-Collect what the session leaves behind: deferred review findings, cut scope, TODOs added to the diff, verification only a human can do, anything parked with a ruling. Sources are the session ledger and the diff — not recollection.
+**This step has two halves and the first one is the one runs skip.** Collecting what the branch leaves behind is the obvious half. Closing what the branch just *resolved* is the half that decides whether the file is worth reading next month — and it is skipped so reliably that users have had to ask *"esse defeito já foi registrado no pendings?"* about work the run had finished hours earlier.
+
+**Half A — reconcile the existing file against your own diff. This half runs on EVERY invocation, including one that defers nothing.** The most likely thing to have falsified an entry in that file is the branch you are about to merge.
+
+It is mechanical, so do it mechanically rather than from memory:
+
+1. Read the pendings file in full. It is the input to this step, not just its output.
+2. Take the identifiers your branch actually touched — file paths from `git diff --name-only $BASE...HEAD`, plus function, RPC, table, migration, function-slug and cron-job names from the diff — and grep the pendings file for each one.
+3. **If the run consumed a spec derived from pendings entries, close those by NAME, not by inference.** `/session-build` records them (`PENDINGS-SOURCE` in its ledger and handoff); a run started straight from the file should have recorded them at Step 0.
+4. Rule every hit into exactly one lane, and **report the count of each in the report, including zero** — a reconciliation with no residual bucket cannot tell you it missed something:
+
+| Lane | What it means | Response |
+|---|---|---|
+| `resolved` | The branch did the thing the entry asked for | **Delete the entry.** Not re-tagged, not annotated — deleted. Report it under *Pendências fechadas*. |
+| `stale-cause` | The entry's *stated cause or unblock* is no longer true, but the defect survives for a different reason | **Rewrite it** with the measured cause, today's number, and the real unblock. Say plainly that the previous text was wrong. |
+| `moved` | Still true, but its numbers, file paths or branch-state claims aged | **Update those fields in place.** Do not leave "not pushed, not deployed" on a branch that merged an hour ago. |
+| `untouched` | Your diff does not reach it | Leave it exactly as it is. |
+
+**`stale-cause` is the lane worth naming separately, because it is worse than a missing entry and it looks like a healthy one.** Observed: an entry said a handler was unreachable *because a file did not exist*. The run created that file, deployed it and drained the queue — and the handler was still unregistered, for an unrelated reason. Every unblock the entry named had happened, so the next reader would have ticked it off and the live defect would have vanished from the file. An entry whose stated cure has been administered, while the disease survives, is a trap the file itself sets.
+
+**Do not resolve an entry from the fact that you did the work — resolve it from a measurement.** "I redeployed the worker" is not "the rows drained"; query the thing the entry is about. Half of what makes this step worth running is that the measurement is available now, on merged code, and will not be later.
+
+**Half B — collect what this branch leaves behind:** deferred review findings, cut scope, TODOs added to the diff, verification only a human can do, anything parked with a ruling. Sources are the session ledger and the diff — not recollection. **Nothing deferred → skip Half B only.** Half A still runs.
 
 **When the work was built by someone else — a fork, an earlier session — ask for density explicitly, or the default answer is useless.** Left unasked, a hand-off reports *"found X, deferred"*. Use the phrasing that worked, close to verbatim:
 
@@ -120,7 +142,7 @@ Collect what the session leaves behind: deferred review findings, cut scope, TOD
 
 That request produced **13 items transcribed almost directly** in a five-branch close-out. Require one more field it does not cover: **any proof that cannot be reproduced.** An equivalence established before a migration that now makes the old path raise is not re-runnable, and an entry that does not say so sends the next reader chasing a break that is not there.
 
-**Nothing deferred → skip this step entirely.** Do not create an empty file, do not invent filler items.
+Do not create an empty pendings file and do not invent filler items to justify one.
 
 Otherwise, find the pendings file (`PENDINGS.md` at the repo root, else `docs/PENDINGS.md`, else the project's named equivalent). **If none exists, create `PENDINGS.md` at the repo root by copying [pendings-template.md](pendings-template.md) verbatim** — header plus the `---`, nothing else. That header is load-bearing: never edit it, never drop it, never write items above it.
 
@@ -242,7 +264,7 @@ Read `assets/report-template.md` and use the variant matching how this branch ac
 
 **Say the shape explicitly when there is no PR and no branch to delete.** A report reading "no PR to open and no branch to delete" was read by the user as the merge having been skipped — *"mas porque voce nao mergeou?"* — and cost a whole turn proving ancestry. Two other runs improvised the same missing line.
 
-**Re-read the pendings file after writing it**, and check whether anything that *survived* was invalidated by this session's own work. Your own diff is the most likely thing to have falsified the list you are leaving behind. See `references/traps.md#stale-survivors`.
+**Re-read the pendings file after writing it.** Step 4's Half A is where the reconciliation happens; this is the check that it actually ran — every entry your diff touches should now be deleted, rewritten or deliberately left, and none should still describe a world your branch ended. See `references/traps.md#stale-survivors`.
 
 ## Ledger
 
@@ -270,6 +292,8 @@ Read `assets/report-template.md` and use the variant matching how this branch ac
 | "I should add the allow rules myself so this stops happening" | Permissions are the user's. Suggest the block, state that `permissions.allow` cannot be scoped to a skill, and let them decide. |
 | "The command exited 0" | Did you pipe it? And `grep -c` exits 1 on a zero count, which is the answer you wanted. |
 | "I closed those pendings, nothing to report" | Closed items are the invisible half. Report them; the user has no other way to know. |
+| "Nothing was deferred, so Step 4 does not apply" | Half A always runs. A branch that defers nothing can still have **resolved** three entries and falsified two more. |
+| "The entry's unblock happened, so it is resolved" | That is `stale-cause`, not `resolved`, until you measure the thing the entry is about. An entry whose stated cure was administered while the defect survives is the trap the file sets for the next reader. |
 
 ## Red flags — stop
 
@@ -280,6 +304,7 @@ Read `assets/report-template.md` and use the variant matching how this branch ac
 - About to `git branch -D` or `git worktree remove --force` with unmerged commits or a dirty tree.
 - About to delete the branch before the merge was confirmed with `git branch -r --contains`.
 - About to edit or drop the pendings file's header.
+- About to write new pendings without having reconciled the existing ones against your own diff (Step 4, Half A).
 - About to sweep unrelated working-tree files into the branch commit.
 - About to remove a worktree holding gitignored artifacts the pendings still cite.
 - About to report a `gh` refusal as a blocker without having tried the local merge lane.

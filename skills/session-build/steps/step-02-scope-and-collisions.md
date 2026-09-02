@@ -10,6 +10,16 @@ In one message. If the user named files, use exactly those.
 
 Open the ledger now: `RUN_ID` = `<YYYYMMDD-HHMM>`, directory `.superpowers/session-build/<RUN_ID>/` in the **main checkout**, and write the project profile from step-01 into it as the first entry. Use `../scripts/ledger.py`.
 
+**If any spec in scope came out of the project's pendings file, record which entries — verbatim — before you go further.** One `PENDINGS-SOURCE` ledger line per spec, quoting each entry's heading exactly as it appears in the file:
+
+```
+scripts/ledger.py append --dir <abs> --type PENDINGS-SOURCE   --text "<spec-slug> consumes: '<entry heading 1>', '<entry heading 2>'"
+```
+
+Carry the same list into `handoff.md` at step-06. **This is the only thing that lets `/session-end` close those entries by NAME instead of guessing from a diff**, and the guess is what fails: a user who starts a run *from* the pendings file routinely finds the same items still sitting there after the close-out. Grepping a diff finds an entry that names a file you touched; it does not find the entry that describes the *behaviour* you just fixed and names no path at all.
+
+Recording the source is not a promise to close it. A spec can consume an entry and only half-close it, and the honest close-out then rewrites the entry rather than deleting it — but it cannot do either if nobody wrote down which entry the work came from.
+
 ## 2.2 Dependency graph — and expect it to be boring
 
 For each ordered pair, classify in plain prose.

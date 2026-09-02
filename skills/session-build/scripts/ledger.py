@@ -51,7 +51,17 @@ CHECKPOINTS = {
     "DEPLOYED", "PUSHED", "BLOCKED", "WAITING", "PARKED", "DONE",
 }
 DIRECTIVES = {"GO", "HOLD", "COORDINATE", "MERGE"}
-BOOKKEEPING = {"RULING", "READING", "ESCALATION", "RELAY", "PROFILE", "NOTE"}
+# PENDINGS-SOURCE: which entries of the project's pendings file a spec was built
+# from, quoted by heading. Written at step-02, carried into handoff.md at step-06,
+# and read by /session-end so it can close those entries BY NAME. Without it that
+# skill can only grep its diff, which finds an entry naming a file it touched and
+# misses one describing a behaviour it fixed - the observed failure being a user
+# who starts a run from the pendings file and finds the same items still there
+# after the close-out.
+BOOKKEEPING = {
+    "RULING", "READING", "ESCALATION", "RELAY", "PROFILE", "NOTE",
+    "PENDINGS-SOURCE",
+}
 KNOWN = CHECKPOINTS | DIRECTIVES | BOOKKEEPING
 
 
