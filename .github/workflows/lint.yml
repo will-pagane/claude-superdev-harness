@@ -113,7 +113,33 @@ jobs:
           ./install.sh
           grep -q "meu proprio" "$CLAUDE_CONFIG_DIR/CLAUDE.md" || { echo "FALHOU: sobrescreveu arquivo do usuario"; exit 1; }
           ./install.sh --force
-          grep -q "meu proprio" "$CLAUDE_CONFIG_DIR/CLAUDE.md.bak" || { echo "FALHOU: --force nao guardou backup"; exit 1; }
+          bak="$(find "$CLAUDE_CONFIG_DIR/.claude-setup-backups" -name CLAUDE.md -type f | head -1)"
+          [ -n "$bak" ] || { echo "FALHOU: --force nao guardou backup"; exit 1; }
+          grep -q "meu proprio" "$bak" || { echo "FALHOU: backup sem o conteudo original"; exit 1; }
+          if [ -e "$CLAUDE_CONFIG_DIR/CLAUDE.md.bak" ]; then
+            echo "FALHOU: backup ficou ao lado do original"; exit 1
+          fi
+
+      - name: --force nao deixa backup dentro de skills/
+        run: |
+          # O defeito que este teste existe para impedir, medido em producao e
+          # nao imaginado: --force renomeava skills/session-end para
+          # skills/session-end.bak, que continua sendo um diretorio com um
+          # SKILL.md dentro. O Claude Code indexa por SKILL.md, nao por nome de
+          # pasta, entao cinco skills fantasma ficaram carregadas junto com as
+          # reais, cada par disputando o mesmo `name:` do frontmatter.
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/bakskills"
+          ./install.sh --copy
+          ./install.sh --copy --force
+          extra="$(find "$CLAUDE_CONFIG_DIR/skills" -maxdepth 1 -name '*.bak' | wc -l)"
+          [ "$extra" -eq 0 ] || { echo "FALHOU: $extra backup(s) dentro de skills/"; exit 1; }
+          repo_skills="$(find skills -maxdepth 1 -mindepth 1 -type d | wc -l)"
+          live_skills="$(find "$CLAUDE_CONFIG_DIR/skills" -maxdepth 1 -mindepth 1 | wc -l)"
+          [ "$repo_skills" -eq "$live_skills" ] || {
+            echo "FALHOU: esperava $repo_skills skills instaladas, achei $live_skills"; exit 1; }
+          # E o backup existe mesmo, fora do caminho que a ferramenta varre.
+          find "$CLAUDE_CONFIG_DIR/.claude-setup-backups" -name SKILL.md -type f | head -1 | grep -q . \
+            || { echo "FALHOU: --force nao guardou as skills em lugar nenhum"; exit 1; }
 
       - name: --settings preserva o resto do settings.json
         run: |
