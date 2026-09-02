@@ -46,6 +46,35 @@ Climb this ladder in order. Never stop on a rung without trying the next.
 >
 > **The trade-off, stated plainly so the choice is real:** `permissions.allow` is **not scoped to a skill**. Claude Code has no way to permit a command only while `session-end` is running, so these entries allow those commands in *every* session, not just this one. What still holds the line is the standing rule in your `CLAUDE.md` — never merge or open a PR unless explicitly asked — which becomes a convention the agent follows rather than a gate the harness enforces. If you would rather keep the harness enforcing it, leave the allowlist alone and accept the occasional refusal; this skill now falls back to a local merge instead of stalling, so a refusal costs a sentence rather than a run.
 
+## The pre-push migration-ledger gate, and the one remedy you must not take
+
+Fired in **6 of 20** observed close-outs, at this step's own push points. Where concurrent sessions apply migrations from unmerged branches, the remote ledger holding rows with no local file is the **normal** state, not a fault.
+
+The hook blocks and recommends a ledger reconcile. **Do not run it.** As one run put it, that command *"would have reconciled the ledger by reverting peers' applied work."*
+
+The sanctioned route, executed identically in three runs:
+
+1. Restore the peer files from **their owning refs** — `git show <ref>:<path> > <path>`, or `git restore --source=<ref> --worktree -- <paths>`. **Never `git checkout`**, which writes the index.
+2. Leave them **untracked and unstaged**. Verify it: `git diff --cached --name-only` must be empty.
+3. Push with the hook running and passing **on its own terms**.
+4. Delete the borrowed files immediately afterwards.
+
+No hook is disabled, no flag bypassed, no link state altered — which is exactly why this is the sanctioned route and the reconcile is not.
+
+**Re-derive the row list at the moment of use.** One run watched it go 9 → 13 → 14 → 15 → 16 within hours as peers kept applying.
+
+## A branch that cannot merge as one unit
+
+When two pipelines react to the same push with nothing ordering them — a host's git integration and a CI workflow, say — and the branch's code calls something that exists only after its own migration applies, **splitting commits inside one pull request does not help.** As the run that met it wrote: *"the race is between two pipelines reacting to one push."*
+
+Split **by ancestry**, which needs no cherry-pick and rewrites no history:
+
+1. `git grep <the new identifiers> <commit>` to prove the earlier commit introduces no call to them.
+2. `git log -S<name>` to name the commit that does.
+3. PR A is `origin/<default>..<the commit before that one>`; PR B is the remainder, which appears by itself once A merges.
+
+**The gate between them is the first pipeline going green — not elapsed time.** Read the job, not the clock.
+
 <!-- split-addition -->
 
 ## Common mistakes

@@ -11,6 +11,8 @@ Hard-gated. Re-check immediately before merging: gates green or laned, every bra
 | Kind | Test | Response |
 |---|---|---|
 | `additive-vs-additive` | Three conditions, all required: (a) both sides only add and neither removes or reinterprets the other's lines; (b) **the added identifiers are provably disjoint** — no duplicated key, route, migration version, enum member or config field; (c) **order does not change meaning**. Then run the affected parser, linter or gate **on the union** and see it pass. | Resolve in-pass by taking **both**, and **recompute every derived counter as a union — never pick a side's number.** |
+| `generated` | The file is produced by a tool from a source of truth — generated types, a lockfile, a compiled catalogue | **Regenerate it from that source.** Never a merge, never a side. One close-out hit `types.ts` **four times** and regenerated every time. |
+| `union-already-computed` | One side already contains the other's content, because it was computed across all the branches while the others carry the stale base | **Take the side that already holds the union.** This looks *exactly* like `additive-vs-additive`, and taking "both" re-introduces the stale rows. The test: does either side's content already contain the other's? Then it is not additive. |
 | `semantic` | Either side changes the meaning of what the other relies on | **Escalate.** |
 
 A run that met six additive-vs-additive conflicts resolved them by hand, correctly, against a rule that then read "no conflicts → stop; never merge anyway". **Text that merely looks additive is not enough**: two pure insertions can still collide on a duplicate key, a repeated migration version or two routes claiming one path. If any of the three conditions is unproven, it is `semantic`.
@@ -33,6 +35,13 @@ Then say in the report which lane ran and why — Step 10's Variant B exists for
 **`gh pr merge` prints nothing on success**, so silence is not evidence either way. Confirm with **`git branch -r --contains <sha>`**, never with `gh pr view --json state`. That query held when `gh` was refused by a classifier twice during this very step, and when the forge returned a **504 Gateway Timeout** indistinguishable from a refusal — the git query proved the merge had landed. `MERGED` — however you establish it — is the only acceptable state before Step 8.
 
 **If you merged the default branch into your branch first, read `references/traps.md#merge-ours` before resolving anything.** The middle step of that trap looks correct and breaks the default branch.
+
+### Who holds the default branch
+
+Ask before the local merge, because the two failures are opposite and four days apart.
+
+- **The main checkout is on a peer's branch, with uncommitted work.** `git checkout <default>` would yank the branch out from under a live session. **Merge in a dedicated worktree on the default branch instead** — bootstrapped and hook-verified — and never touch the peer's files. One run did exactly this, having inspected the peer's uncommitted `.husky/pre-push` before leaving it alone.
+- **A peer worktree already holds the default branch**, so `git checkout` is refused outright. **Stop, report, resume later.** One run did, and completed its cleanup a turn later once the peer released it. Step 9 says plainly that this is a terminal state and not a failure.
 
 <!-- split-addition -->
 
