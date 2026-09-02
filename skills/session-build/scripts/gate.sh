@@ -12,6 +12,13 @@
 #     Nothing stands between the command finishing and $? being read.
 #   * A failure to open the log is reported as a WRAPPER error, never as the
 #     command's exit code, and the command does not run.
+#   * With --expect <literal>, a log not containing that literal reports
+#     UNDECIDED and exits 75. UNDECIDED is neither red nor green: it is absent
+#     verification. Never merge off it and never report it as a failure -
+#     re-run the gate scoped, split or backgrounded.
+#
+# NOTE: duplicated verbatim in the other session-* skill's scripts/gate.sh.
+# Change both or neither.
 #
 # WHAT IT CANNOT GUARANTEE: if you hand it a shell interpreter and a script
 # string, the shell owns the exit status, not this file. `gate.sh x sh -c 'foo |
@@ -48,11 +55,15 @@ set -u
 OUT_DIR="${GATE_LOG_DIR:-${TMPDIR:-/tmp}}"
 PROVE_RED=false
 ALLOW_SHELL=false
+EXPECT=""
 
 while [ "$#" -gt 0 ]; do
   case "${1:-}" in
     --prove-red) PROVE_RED=true; shift ;;
     --shell)     ALLOW_SHELL=true; shift ;;
+    --expect)    shift
+                 [ "$#" -gt 0 ] || { echo "gate.sh: --expect needs a pattern" >&2; exit 64; }
+                 EXPECT="$1"; shift ;;
     *)           break ;;
   esac
 done
@@ -63,7 +74,7 @@ wrapper_error() {
 }
 
 if [ "$#" -lt 2 ]; then
-  echo "usage: gate.sh [--prove-red] [--shell] <label> <command> [args...]" >&2
+  echo "usage: gate.sh [--prove-red] [--shell] [--expect <literal>] <label> <command> [args...]" >&2
   exit 64
 fi
 
@@ -120,6 +131,31 @@ lines=0
 if [ -f "$log" ]; then
   lines=$(wc -l < "$log")
   lines=${lines// /}
+fi
+
+# --expect answers a question the exit code cannot: did the gate FINISH?
+# A suite killed mid-run returns 1 and is indistinguishable from a red - seven
+# of twenty observed close-outs hit that, and at least two triaged a killed run
+# as a failing one. So the caller names a fragment of the runner's own summary
+# line, and a log without it is reported as UNDECIDED: not red, not green, no
+# verification. Checked regardless of exit code - a command that exits 0 having
+# printed no summary is a runner that did nothing, which is worse, not better.
+#
+# The match is a FIXED STRING, not a regex: grep -E speaks POSIX ERE and
+# PowerShell's Select-String speaks .NET, so one flag documented as "a regex"
+# would mean two different things on the two platforms. Runner summary lines
+# are literal text, so the regex bought nothing and cost portability.
+#
+# NOTE 75 is EX_TEMPFAIL and is NOT reserved: a command under test can exit 75
+# too. Tell the cases apart by the RECORD TYPE on stdout (`GATE ... UNDECIDED`
+# versus `GATE ... EXIT`), never by the exit code alone - the same caveat this
+# script already carries for WRAPPER_ERROR and 70.
+if [ -n "$EXPECT" ] && ! grep -qF -- "$EXPECT" "$log" 2>/dev/null; then
+  echo "GATE $label UNDECIDED LOG $log LINES $lines"
+  if [ "$PROVE_RED" = true ]; then
+    echo "GATE $label PROVE_RED INCONCLUSIVE - gate did not complete" >&2
+  fi
+  exit 75
 fi
 
 echo "GATE $label EXIT $code LOG $log LINES $lines"
