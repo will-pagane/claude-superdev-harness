@@ -32,7 +32,7 @@ Details and the runs behind all three: `references/traps.md#cleanup`.
 
 ## Production is not "up", it is "running what we merged"
 
-**Verify production serves the **merged SHA, by identifier** — the deployment id, the image version, the commit the host reports — not that a health endpoint answers 200.
+Verify production serves the **merged SHA, by identifier** — the deployment id, the image version, the commit the host reports — not that a health endpoint answers 200.
 
 Measured: a post-merge deploy failed, its cause was fixed, and the host redeployed **the old image** on its own. Production was healthy and still not running the merged code. *"It is up and green"* and *"it is running the code we merged"* are different claims, and only the second was the goal. The run caught it, re-ran the failed job, and confirmed the new version by id.
 
