@@ -86,6 +86,8 @@ DONE <slug>          # your CLAIM that the work is complete and pushed. The orch
                      # reopened if the diff and your report disagree. That is routine.
 ```
 
+**A gate that did not finish did not decide.** Run gates with `--expect <a fragment of the runner's own summary line>`. A log without it prints `GATE <label> UNDECIDED` and exits **75** — that is **absent verification**, not a red. Report it as `BLOCKED gate did not complete`, never as a failing test: an orchestrator that receives `BLOCKED gate red` triages it `regression` and stops the run over a suite that was merely killed. Seven of twenty observed close-outs met a killed gate, and `EXIT 1` is exactly what a real red looks like.
+
 **Re-send an ungranted `LOCK`** if a phase passes without a grant. A re-send is a symptom that the orchestrator dropped one, not noise.
 
 **`PARKED` is a draft pendings entry, not a note to self.** It is the only thing that crosses from you to whoever closes the branch, and that session cannot re-open your investigation. File and line, the number you measured *and how*, the shape of the fix, the exposure left open. And mark any **single-window proof** as such — an equivalence established before a migration that now makes the old path raise cannot be re-run, and an unmarked one sends the closing session chasing a break that is not there.
