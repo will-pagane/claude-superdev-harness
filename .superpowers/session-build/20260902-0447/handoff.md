@@ -15,7 +15,18 @@ have to re-derive *which* things.
 | `gate_order` | `bash -n install.sh` → `node --check statusline/statusline.mjs` → `bash -n` on every `skills/**/*.sh` and `scripts/**/*.sh` → `node --check` on every `skills/**/*.{js,mjs}` → `JSON.parse` on `settings.example.json` → the installer integration tests in `.github/workflows/lint.yml` |
 | Local git hooks | **NONE.** `core.hooksPath` unset, `.git/hooks` holds only samples. A clean commit proves nothing here; every gate is one someone runs explicitly. |
 
-## Branches — THREE, not two
+## Branches — FOUR
+
+**A fourth branch was added after the close-out**, on a separate user request, and it is not part of
+this run's ledger: `feat/brainstorm-visual-companion-20260902` — `74d6571`, cut from `origin/main`,
+worktree `C:/dev/Projects/claude-setup/.claude/worktrees/brainstorm-visual-companion-20260902`.
+
+It touches exactly two files, `skills/session-build/steps/step-01-preflight-and-brainstorm.md` and
+`skills/session-build/SKILL.md`. **Both are untouched by the three branches below** — verified with
+`git diff --name-only origin/main...<branch>` against each. It merges in any order, before or after
+them. Gates: the repo's three parse gates EXIT 0; there is nothing else to run on a markdown change.
+
+The three branches this run produced:
 
 Both feature branches were cut from `docs/session-skills-specs-20260902`, which carries the specs
 and the run ledger. That branch then advanced by one commit the feature branches do **not**
