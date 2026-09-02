@@ -86,14 +86,6 @@ exportação, então reproduzir por export devolve "limpo" e esconde a condiçã
 Unblock: `git add --renormalize` nesses caminhos, em commit próprio. Não feito aqui: esta skill
 fecha trabalho, não abre, e os arquivos pertencem a uma skill que este run não tocou.
 
-### `GATED` — a job `symlink-probe-windows` só se prova na primeira execução do CI
-
-`.github/workflows/lint.yml`. Ela passa `--require-capable`, então um runner incapaz de criar
-symlink de diretório fica **vermelho** por precondição em vez de passar em falso. Se
-`windows-latest` consegue não é decidível daqui. Gate: a primeira execução.
-Leia se ela imprimiu `oracle: directory symlink possible here = yes` **antes** de dizer que ela
-cobre a regressão do `install.sh`.
-
 ### `ACCEPTED` — a fork lane da session-end sai sem nunca ter rodado
 
 `skills/session-end/steps/lane-fork-orchestrator.md`. Nenhum close-out real de N≥2 a exercitou e
@@ -105,5 +97,8 @@ Raio de alcance: só a lane — as lanes inline e sequencial não mudaram e são
 `python3` aqui é o stub da Microsoft Store: existe no PATH, imprime "Python nao foi encontrado" e
 sai 49; `python` é 3.12.10 real. Todo resolvedor escrito exige a string exata `PY_OK` em vez de
 confiar em nome ou exit code. Num Linux o fallback nunca é exercitado.
-E a contagem de `check-drift.sh` é uma **leitura**, não propriedade: eram 5 antes destes merges e
-muda quando as skills reinstalarem. Releia a lista antes de tratar número diferente como defeito.
+E a contagem de `check-drift.sh` é uma **leitura**, não propriedade. Eram 5 antes destes merges;
+medida na `main` mergeada às 09:2xZ são **34 linhas**, quase todas `ONLY IN REPO` sob
+`session-end/verify/` e `session-end/steps/` — os arquivos novos que o `~/.claude` ainda não tem
+porque **o install não rodou**. Isso é a divergência esperada, não defeito: cai quando
+`./install.sh --skills` rodar. Releia a lista antes de tratar número diferente como bug do script.

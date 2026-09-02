@@ -136,3 +136,23 @@ silence. All five list `origin/main`.
 
 Delivered. Variant B — local merge, no PR, and the reason is demonstrated practice rather than a
 classifier refusal: this repo has never had a pull request.
+
+## Step 10 — the re-read, and it changed the file
+
+Re-read `PENDINGS.md` after writing it and re-measured the two entries whose claims the merges
+could have aged. Both had.
+
+- **`GATED` symlink-probe-windows: RESOLVED and DELETED, not re-tagged.** Its gate was the first
+  CI run and that run has happened — `33613873907` on `main`, all four jobs success. Read the job
+  log rather than the job's verdict: it printed `oracle: directory symlink possible here = yes`,
+  `installer: produced symlinks = yes`, `OK: probe and reality agree (both yes)`. So
+  `windows-latest` genuinely can create a directory symlink and the job is not passing vacuously.
+  The entry demanded exactly that line before anyone described the job as covering the
+  regression; the line exists, so the entry is done and the file is not a graveyard.
+- **Drift count: `moved`, updated in place.** It said 5 and "changes when the skills reinstall".
+  Measured on merged `main` at 09:2xZ: **34 lines**, nearly all `ONLY IN REPO` under
+  `session-end/verify/` and `session-end/steps/` — the new files `~/.claude` does not have because
+  **the install has not run**. Expected divergence, not a defect, and it falls when
+  `./install.sh --skills` runs.
+
+Every other entry re-checked against the merged tree and still true.
