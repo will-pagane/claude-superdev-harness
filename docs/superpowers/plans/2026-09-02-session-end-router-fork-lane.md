@@ -1389,12 +1389,12 @@ The largest content task. Four evidence sections land here: **D3** (pre-push mig
 
 ```bash
 # --- D: Steps 5-7 -----------------------------------------------------------
-want D3-ledger-gate   steps/step-05-push-and-pr.md 'the remote ledger holding rows with no local file is the **normal** state'
-want D3-restore       steps/step-05-push-and-pr.md 'git restore --source=<ref> --worktree -- <paths>'
-want D3-never-co      steps/step-05-push-and-pr.md '**Never `git checkout`**, which writes the index'
-want D3-rederive      steps/step-05-push-and-pr.md 'Re-derive the row list at the moment of use'
-want D4-ancestry      steps/step-05-push-and-pr.md 'Split **by ancestry**, which needs no cherry-pick'
-want D4-not-elapsed   steps/step-05-push-and-pr.md 'The gate between them is the first pipeline going green'
+want D3-ledger-gate   references/traps.md 'the remote ledger holding rows with no local file is the **normal** state'
+want D3-restore       references/traps.md 'git restore --source=<ref> --worktree -- <paths>'
+want D3-never-co      references/traps.md '**Never `git checkout`**, which writes the index'
+want D3-rederive      references/traps.md 'Re-derive the row list at the moment of use'
+want D4-ancestry      references/traps.md 'Split **by ancestry**, which needs no cherry-pick'
+want D4-not-elapsed   references/traps.md 'The gate between them is the first pipeline going green'
 want D2-generated     steps/step-07-merge.md '**Regenerate it from that source.** Never a merge, never a side'
 want D2-union         steps/step-07-merge.md 'union-already-computed'
 want D2-union-test    steps/step-07-merge.md 'does either side'"'"'s content already contain the other'"'"'s?'
@@ -1587,12 +1587,12 @@ python "$SKILL/scripts/ledger.py" append --dir "$LEDGER" --fork "$SLUG" --type T
 ```bash
 # --- Steps 8-9 --------------------------------------------------------------
 want C5-merged-sha   steps/step-08-sync-and-cleanup.md 'Verify production serves the **merged SHA, by identifier**'
-want A4-two-preds    steps/step-08-sync-and-cleanup.md '`git branch -d` has two predicates, not one'
-want A4-detach       steps/step-08-sync-and-cleanup.md 'git worktree add --no-checkout --detach <merge-sha>'
-want A5-tree-level   steps/step-08-sync-and-cleanup.md 'Record that tree-level proof, per file, in the ledger'
-want D5-nongit       steps/step-08-sync-and-cleanup.md '`Permission denied`, `Directory not empty`, `Filename too long`'
-want D5-exit0-lie    steps/step-08-sync-and-cleanup.md 'exited 0 while leaving the directory in place'
-want D1-partial      steps/step-08-sync-and-cleanup.md 'Partial cleanup is a legitimate terminal state'
+want A4-two-preds    references/traps.md '`git branch -d` has two predicates, not one'
+want A4-detach       references/traps.md 'git worktree add --no-checkout --detach <merge-sha>'
+want A5-tree-level   references/traps.md 'Record that tree-level proof, per file, in the ledger'
+want D5-nongit       references/traps.md '`Permission denied`, `Directory not empty`, `Filename too long`'
+want D5-exit0-lie    references/traps.md 'exited 0 while leaving the directory in place'
+want D1-partial      references/traps.md 'Partial cleanup is a legitimate terminal state'
 ```
 
 - [ ] **Step 2: Add the merged-SHA proof to Step 8**
@@ -2072,6 +2072,29 @@ python "$SKILL/scripts/ledger.py" append --dir "$LEDGER" --fork "$SLUG" --type P
 ```
 
 ---
+
+## What a run actually loads — the measurement the split exists for, taken after implementation
+
+| | bytes | vs monolith |
+|---|---|---|
+| old monolith, loaded on every invocation | 36,761 | — |
+| router alone | 8,943 | |
+| **docs-only run** (router + steps 00, 01, 10) | 25,280 | **-31%** |
+| **full app run** (router + 00, 01, 02, 04, 05, 07, 08, 10) | 53,599 | **+45%** |
+
+**The full case costs more than the monolith it replaced, and that is not hidden here.** Two reasons, and only one of them is a defect:
+
+1. **The corpus grew.** Twenty ledgers produced 21 findings that were not in the original 36,761 bytes. A skill that says more costs more to read, and the alternative was not a cheaper full run but a skill that keeps making the same mistakes.
+2. **Failure-path material was loading unconditionally**, which *was* a defect. `session-build` puts that material under `references/` behind a named trigger; the first cut of this split put all of it in steps, which load whole once their step runs. Four sections totalling ~6.0 KB moved to `references/traps.md` with their triggers named at the call site: the pre-push ledger gate, the split-by-ancestry case, *making this deterministic*, and the cleanup failure paths. That took the full run from **58,181 to 53,599**.
+
+**Two files remain over the spec's 7,168 estimate, and nothing moved out of either. The reason is recorded per file:**
+
+- `step-01-verify.md` (8,038) — the six triage lanes are unconditional. Every run gates, and a red gate needs its lane at the moment it goes red; deferring the table would leave a step that cannot triage without a second load.
+- `step-04-pendings.md` (7,952) — 6,307 bytes is Step 4's body, which the spec requires to move verbatim, and Half A runs on every invocation including one that defers nothing. Nothing here is trigger-gated.
+
+Both reasons live in `budgets.sh`'s `why()` beside the comparison, and **an over-7,168 file with no recorded reason now fails the check** — proved by padding `step-07-merge.md` to 7,408 and watching it go red, then restoring.
+
+**A further reduction exists and was deliberately not taken:** routing the whole triage table behind a `gate red -> read references/triage.md` pointer would cut `step-01` by roughly 3 KB. That is a second split, not a move, and it was out of scope.
 
 ## Rounds 1 and 2 of codex-review — what was applied, and what was not
 

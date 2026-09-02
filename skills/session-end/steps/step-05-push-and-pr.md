@@ -28,52 +28,14 @@ Climb this ladder in order. Never stop on a rung without trying the next.
 **Then suggest the fix, once, at the end of the report.** A refusal that recurs is a missing allowlist entry, not fate. See *Making this deterministic* below.
 
 <!-- moved -->
-## Making this deterministic — suggest it, do not do it
 
-**Say this once, at the end of the report, and only when a refusal actually happened this run.** Do not edit the user's settings yourself: permissions are theirs, and a skill that silently widens them has taken a decision that was not delegated to it.
+## When the push or the pull request is refused
 
-> The `gh`/merge steps were refused by the permission classifier this run and allowed in others. That inconsistency is not the repo — it is that these commands are not on the allowlist, so every call falls to a classifier that is free to answer differently each time. Adding them to `permissions.allow` in `~/.claude/settings.json` makes the behaviour deterministic:
->
-> ```json
-> "Bash(gh pr create:*)",
-> "Bash(gh pr merge:*)",
-> "Bash(gh pr view:*)",
-> "Bash(git merge:*)",
-> "Bash(git branch -d:*)",
-> "Bash(git worktree remove:*)",
-> "Bash(git push origin --delete:*)"
-> ```
->
-> **The trade-off, stated plainly so the choice is real:** `permissions.allow` is **not scoped to a skill**. Claude Code has no way to permit a command only while `session-end` is running, so these entries allow those commands in *every* session, not just this one. What still holds the line is the standing rule in your `CLAUDE.md` — never merge or open a PR unless explicitly asked — which becomes a convention the agent follows rather than a gate the harness enforces. If you would rather keep the harness enforcing it, leave the allowlist alone and accept the occasional refusal; this skill now falls back to a local merge instead of stalling, so a refusal costs a sentence rather than a run.
+**Three failure paths live in `../references/traps.md` and load only when their trigger fires.** Each is conditional on something that is not true of most runs, which is why they are not read here.
 
-## The pre-push migration-ledger gate, and the one remedy you must not take
-
-Fired in **6 of 20** observed close-outs, at this step's own push points. Where concurrent sessions apply migrations from unmerged branches, the remote ledger holding rows with no local file is the **normal** state, not a fault.
-
-The hook blocks and recommends a ledger reconcile. **Do not run it.** As one run put it, that command *"would have reconciled the ledger by reverting peers' applied work."*
-
-The sanctioned route, executed identically in three runs:
-
-1. Restore the peer files from **their owning refs** — `git show <ref>:<path> > <path>`, or `git restore --source=<ref> --worktree -- <paths>`. **Never `git checkout`**, which writes the index.
-2. Leave them **untracked and unstaged**. Verify it: `git diff --cached --name-only` must be empty.
-3. Push with the hook running and passing **on its own terms**.
-4. Delete the borrowed files immediately afterwards.
-
-No hook is disabled, no flag bypassed, no link state altered — which is exactly why this is the sanctioned route and the reconcile is not.
-
-**Re-derive the row list at the moment of use.** One run watched it go 9 → 13 → 14 → 15 → 16 within hours as peers kept applying.
-
-## A branch that cannot merge as one unit
-
-When two pipelines react to the same push with nothing ordering them — a host's git integration and a CI workflow, say — and the branch's code calls something that exists only after its own migration applies, **splitting commits inside one pull request does not help.** As the run that met it wrote: *"the race is between two pipelines reacting to one push."*
-
-Split **by ancestry**, which needs no cherry-pick and rewrites no history:
-
-1. `git grep <the new identifiers> <commit>` to prove the earlier commit introduces no call to them.
-2. `git log -S<name>` to name the commit that does.
-3. PR A is `origin/<default>..<the commit before that one>`; PR B is the remainder, which appears by itself once A merges.
-
-**The gate between them is the first pipeline going green — not elapsed time.** Read the job, not the clock.
+- **A pre-push migration-ledger gate refuses the push**, listing remote-only rows owned by peer sessions → **`#pre-push-ledger-gate`**. Fired in 6 of 20 observed close-outs. The remedy the hook itself recommends is the one that reverts peers' applied work; the sanctioned borrow-and-restore route is there.
+- **Two pipelines react to the same push with nothing ordering them**, and the branch's code calls something its own migration creates → **`#cannot-merge-as-one-unit`**. Split by ancestry, never by cherry-pick.
+- **A classifier refusal actually happened this run**, and you are writing the report → **`#making-this-deterministic`**. Said once, at the end, and never acted on unilaterally: permissions are the user's.
 
 <!-- split-addition -->
 
