@@ -35,6 +35,14 @@ Opcionais, cada um preso a uma skill específica — ver [dependências por skil
 Sem ele, o script **copia e diz que copiou**. Copia funciona igual, com uma diferença que importa: ela não se atualiza sozinha, então depois de cada `git pull` aqui você roda `./install.sh` de novo.
 
 > O `ln -s` do Git Bash não falha quando não consegue symlinkar — ele copia e retorna sucesso. Por isso o script escreve um symlink de teste e pergunta ao disco o que ficou lá, em vez de confiar no código de saída.
+>
+> E o Git Bash não cria symlink nativo sem `MSYS=winsymlinks:nativestrict`, **nem com o Modo de Desenvolvedor ligado**. Até 2026-09-02 o probe não setava essa variável, então respondia "esta máquina não symlinka" numa máquina que symlinka, e todo mundo no Windows ficava na cópia sem saber. Ligar o Modo de Desenvolvedor sozinho não resolvia nada.
+
+**O que o symlink te dá, e o que ele te cobra.** Com symlink, `~/.claude/skills/session-end` **é** o `skills/session-end` deste repo: editar um é editar o outro, e propagar deixa de ser tarefa pra virar `git add`. O preço é o mesmo fato visto do outro lado — uma edição quebrada aqui é uma skill quebrada em toda sessão, na hora, sem passar por commit. Se preferir a rede de proteção, `./install.sh --skills --copy` continua copiando.
+
+**Pra saber se o que roda é o que está commitado:** `bash scripts/check-drift.sh` compara `skills/**` com o que está instalado, ignorando fim de linha e ignorando skills que este repo não gerencia. Sem esses dois filtros a comparação nesta máquina acusava **104 linhas** de divergência onde só **5** eram reais: dos 41 arquivos que este repo gerencia, 34 diferiam byte a byte e 29 dessas diferenças eram só CRLF; as outras 99 linhas eram arquivos de 44 skills instaladas de outras fontes, que este repo nem gerencia. Um check que grita 104 ninguém lê, e foi assim que as 5 reais ficaram meses sem aparecer.
+
+**O CI não enxerga o seu `~/.claude`, e não finge que enxerga.** Ele roda três coisas: `check-drift.sh --repo-only`, que checa só o que um checkout prova sobre si mesmo (todo skill tem `SKILL.md`, `*.sh` em LF, `*.ps1` em CRLF); um job que instala numa pasta temporária pra provar que o modo de comparação funciona — verde depois de instalar, vermelho depois de uma edição real, verde de novo quando a única diferença é fim de linha; e um job no `windows-latest` que roda `scripts/symlink-oracle.sh`, o único capaz de ficar vermelho se alguém tirar o `MSYS` do probe de novo. Quem roda a comparação na sua máquina é você.
 
 ## Instalação
 

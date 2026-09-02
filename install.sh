@@ -70,13 +70,24 @@ done
 # symlinka, Windows sem ele nao. `ln -s` do Git Bash e pior que falhar — ele
 # COPIA e retorna 0, entao a unica leitura confiavel e escrever um symlink de
 # teste e perguntar ao `test -L` se o que ficou no disco e mesmo um symlink.
+#
+# E o Git Bash NAO cria symlink nativo sem MSYS=winsymlinks:nativestrict, nem
+# com o Developer Mode ligado. Sem essa variavel o probe responde "esta maquina
+# nao symlinka" numa maquina que symlinka, o install cai pra copia, e a copia
+# nunca mais se atualiza. A variavel e inerte fora do MSYS, e e ADICIONADA ao
+# $MSYS que ja existir — sobrescrever descartaria opcao do usuario.
+#
+# O probe linka um DIRETORIO com um sentinela dentro, nao um arquivo: e isso que
+# o instalador realmente cria, e o Windows trata symlink de arquivo e de
+# diretorio como operacoes distintas.
 can_symlink() {
   local probe_dir probe_src probe_dst rc
   probe_dir="$(mktemp -d 2>/dev/null)" || return 1
   probe_src="$probe_dir/src"; probe_dst="$probe_dir/dst"
-  : > "$probe_src"
+  mkdir -p "$probe_src"
+  : > "$probe_src/sentinel"
   rc=1
-  if ln -s "$probe_src" "$probe_dst" 2>/dev/null && [ -L "$probe_dst" ]; then
+  if MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -s "$probe_src" "$probe_dst" 2>/dev/null      && [ -L "$probe_dst" ] && [ -d "$probe_dst" ] && [ -f "$probe_dst/sentinel" ]; then
     rc=0
   fi
   rm -rf "$probe_dir"
@@ -144,7 +155,7 @@ install_path() {
   rm -rf "$dst"
 
   if [ "$MODE" = "symlink" ]; then
-    ln -sfn "$src" "$dst"
+    MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -sfn "$src" "$dst"
     # Verifica em vez de confiar: o `ln` do Git Bash retorna 0 depois de copiar.
     [ -L "$dst" ] || die "esperava symlink em $dst e o disco tem outra coisa — rode com --copy"
     info "${GRN}LINK${RST}  $dst ${DIM}-> $src${RST}"
