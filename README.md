@@ -65,7 +65,7 @@ Depois, **reinicie o Claude Code** — skills e statusline são carregados na ab
 | `--all` | tudo, na ordem |
 | `--settings` | escreve `statusLine` no `settings.json`, preservando o resto (backup `.bak-<timestamp>`) |
 | `--copy` | força cópia mesmo onde symlink funcionaria |
-| `--force` | substitui arquivo real seu que já exista, guardando `.bak` antes |
+| `--force` | substitui arquivo real seu que já exista, guardando cópia em `~/.claude/.claude-setup-backups/<timestamp>/` antes — **fora** de `skills/`, senão o backup de uma skill continua sendo carregado como skill |
 | `--dry-run` | mostra, não escreve |
 | `--uninstall` | remove o que este script instalou — e só isso |
 

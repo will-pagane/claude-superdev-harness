@@ -113,6 +113,32 @@ record() {
   grep -qxF "$1" "$MANIFEST" 2>/dev/null || printf '%s\n' "$1" >> "$MANIFEST"
 }
 
+# Backups vao para FORA de qualquer diretorio que o Claude Code varra, e nunca
+# para "$dst.bak" ao lado do original.
+#
+# Motivo, medido: `--force` renomeava skills/session-end para
+# skills/session-end.bak, que continua sendo um diretorio com SKILL.md dentro —
+# e o Claude Code indexa por SKILL.md, nao por nome de pasta. Resultado: cinco
+# skills fantasma carregadas junto com as reais, cada par disputando o mesmo
+# `name:` do frontmatter. Um backup que a ferramenta continua enxergando nao e
+# um backup, e uma copia ativa.
+#
+# Timestamp mais PID por rodada: duas execucoes de --force nunca se sobrescrevem,
+# nem quando caem no mesmo segundo — sem o PID, `mv` moveria a segunda PARA DENTRO
+# da primeira em vez de ao lado dela. Isso e o que remove o `rm -rf "$dst.bak"`
+# que existia aqui antes e apagava o backup anterior sem perguntar.
+BACKUP_ROOT="$CLAUDE_DIR/.claude-setup-backups/$(date -u +%Y%m%d-%H%M%S)-$$"
+
+# Ecoa o destino do backup de $1 preservando o caminho relativo a CLAUDE_DIR.
+backup_target() {
+  local dst="$1" rel
+  case "$dst" in
+    "$CLAUDE_DIR"/*) rel="${dst#"$CLAUDE_DIR"/}" ;;
+    *)               rel="$(basename "$dst")" ;;
+  esac
+  printf '%s/%s' "$BACKUP_ROOT" "$rel"
+}
+
 # Instala $1 (no repo) em $2 (no ~/.claude), symlinkando ou copiando.
 install_path() {
   local src="$1" dst="$2" label="${3:-}"
@@ -128,11 +154,12 @@ install_path() {
     if [ -L "$dst" ]; then
       :
     elif [ "$FORCE" = true ]; then
+      local bak; bak="$(backup_target "$dst")"
       if [ "$DRY_RUN" = false ]; then
-        rm -rf "$dst.bak"
-        mv "$dst" "$dst.bak"
+        mkdir -p "$(dirname "$bak")"
+        mv "$dst" "$bak"
       fi
-      info "${DIM}BAK   $dst -> $dst.bak${RST}"
+      info "${DIM}BAK   $dst -> $bak${RST}"
     else
       # Copia instalada por uma rodada anterior deste mesmo script conta como
       # nossa: sem isso, `git pull && ./install.sh` no Windows virava no-op
