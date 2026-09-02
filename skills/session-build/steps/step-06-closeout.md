@@ -46,7 +46,11 @@ State this explicitly in the report — it is not obvious from outside.
 
 ## 6.6 Hand off to `/session-end` with what it would otherwise re-derive
 
-Write `.superpowers/session-build/<RUN_ID>/handoff.md` and name it in the report: branch list with commit ranges, worktree absolute paths, merge order **with the reason each branch holds its position**, the deploy set, migrations applied and whether their branch has merged, live-fork status, and the project profile from step-01.
+Write `.superpowers/session-build/<RUN_ID>/handoff.md` and name it in the report: branch list with commit ranges, worktree absolute paths, merge order **with the reason each branch holds its position**, the deploy set, migrations applied and whether their branch has merged, live-fork status, the project profile from step-01, **the `PENDINGS-SOURCE` list from step-02 — every pendings entry this run's specs were built from, quoted by heading — and the `spec slug → agentId` map for every fork.**
+
+That last field is what `/session-end`'s fork lane addresses forks by, and it cannot be reconstructed. A real handoff recorded only *"Fork: alive, worktree untouched"* — true, and useless as an address, because names are not unique on this machine and only the agentId disambiguates. If a fork is dead, say so and give the id anyway: the lane spawns a fresh fork pointed at `fork-<slug>.md` on disk, and never assumes a fork remembers anything.
+
+That last field is the one `/session-end` cannot reconstruct. Its Step 4 reconciles the pendings file against the branch diff, which catches entries naming a file you touched and misses entries describing a behaviour you fixed. Naming the entries closes that gap — and if this run consumed no pendings entry, say so in one line rather than omitting the field, because an absent section reads as a forgotten one.
 
 `/session-end` **re-measures everything it acts on** — the handoff tells it *what* to measure, never what is true. Without it that checklist gets improvised from scratch, which is what happened in every observed run where the boundary was crossed by hand.
 
@@ -58,6 +62,7 @@ Write `.superpowers/session-build/<RUN_ID>/handoff.md` and name it in the report
 - About to leave a report section reading "N/A" instead of deleting it.
 - About to abandon or park a branch whose migration already landed, without naming that migration.
 - About to remove or hand over a worktree holding gitignored artifacts the pendings still cite.
+- About to write `handoff.md` without the `PENDINGS-SOURCE` list, or without an explicit line saying this run consumed none.
 - About to open a PR or merge. This skill does neither, ever.
 
 ## NEXT

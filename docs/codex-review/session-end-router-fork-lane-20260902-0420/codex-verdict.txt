@@ -1,0 +1,3 @@
+No material issues remain. All nine commits inline the branch guard with add/commit, and `prove-red.sh` restores safely on normal exit, interruption, and termination while asserting the specific expected failure modes.
+
+VERDICT: APPROVED
