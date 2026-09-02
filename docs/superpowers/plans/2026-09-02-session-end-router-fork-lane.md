@@ -1677,7 +1677,7 @@ python "$SKILL/scripts/ledger.py" append --dir "$LEDGER" --fork "$SLUG" --type T
 ```bash
 # --- Decision 4 -------------------------------------------------------------
 want I-ledger-vocab  ../session-build/scripts/ledger.py 'PENDINGS-RULING'
-want I-fork-init     ../session-build/scripts/ledger.py 'fork'
+want I-fork-init     ../session-build/scripts/ledger.py 'a fork could not create its own ledger'
 want I-agentid       ../session-build/steps/step-06-closeout.md 'agentId'
 ```
 

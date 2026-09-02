@@ -4,15 +4,30 @@
 
 ## Step 1 — Verify before anything irreversible
 
-Run the project's full lint, typecheck, build and test suite **yourself**, through `scripts/gate.sh`, and read the actual output.
+Run the project's full lint, typecheck, build and test suite **yourself**, through `<skill-dir>/scripts/gate.sh`, and read the actual output.
 
-**A red gate is not automatically a stop. Triage it into exactly one lane and name the proof:**
+**A red gate is not automatically a stop. Triage it into exactly one lane and name the proof.** A lane is defined by **the proof it demands**, not by its name — a run that cannot produce the proof falls back to `regression`, which stops the merge, so the failure mode is conservative by construction.
 
 | Lane | Proof required | Response |
 |---|---|---|
+| `incomplete` | `gate.sh` reported **`UNDECIDED`** — the log carries no summary line from the runner itself | **Not a red, and not a green.** Re-run scoped, split or in the background. Never merge off it and never report it as a failure. |
 | `regression` | The same gate is green on the base and the failure signature is new | **Escalate.** Never migrate, deploy or merge off it. |
 | `pre-existing-on-base` | **Reproduce the same normalised failure on a clean checkout of the base ref.** Byte-comparing the failing file against base is *not* proof on its own — an unchanged test can fail from a changed caller, config, schema or generated input; it is admissible only alongside a stated argument that nothing in your diff reaches that file. | Record with the reproduction, report at Step 10, continue |
-| `environmental` | Name the missing or stale artifact — dependencies not installed, a stale dependency tree | Repair **without touching branch content**, then re-run. **Continue only if the identical gate now returns green**; if the failure survives the repair it was never environmental — re-triage it. |
+| `flaky-under-load` | **All three, not two:** green in isolation, green on a clean checkout of the base, and green on an identical re-run. Fewer than three is a different lane. | Record all three readings, continue |
+| `foreign-dirty-tree` | `git show HEAD:<path>` proves the committed file is clean and the red comes from a **peer's uncommitted state** in a shared checkout | **Touch nothing.** Report it. It is not yours to fix and not yours to triage further. |
+| `environmental` | Name the missing or stale artifact — dependencies not installed, a stale dependency tree. **Sub-case `missing-artifact`:** a gate run before the one that generates its input, such as a type check ahead of the build that writes the types it reads. That is a *gate order* problem, not an installation one, and the project profile's `gate_order` is the fix. | Repair **without touching branch content**, then re-run. **Continue only if the identical gate now returns green**; if the failure survives the repair it was never environmental — re-triage it. |
+
+**`incomplete` is the lane runs did not have and most needed.** Seven of twenty observed close-outs met a gate that was killed — by a tool timeout, by the harness, by memory pressure — and `EXIT 1` is exactly what a real red looks like. Two triaged the corpse as a failing test. One run put it in the words this lane exists to preserve: *a gate that did not finish did not decide.* Name a fragment of the runner's own summary line in `gate_order` and let the flag decide:
+
+```
+<skill-dir>/scripts/gate.sh --expect 'Test Files' test npm test
+```
+
+Pick a fragment a **complete** run always prints and a killed run never reaches. One that also appears in ordinary progress output is worthless: it will match a corpse.
+
+**A cached green is not a green.** Where the project uses a build cache — turbo, nx, bazel — run the Step 1 gates with the cache disabled and record the cache-miss evidence. A cached exit code is a recording of an older tree. One run re-ran every gate with `--force` and recorded `Cached: 0` beside each.
+
+**Report what the suite did not run.** `344 passed, 13 deselected` overstates coverage until the deselection is named, and one run said so about its own output rather than quoting the headline number.
 
 Without these lanes the rule is an absolute that correct behaviour has to break: one run proved eight failures pre-existing over 35 minutes and merged, correctly; another repaired a stale dependency tree and continued, correctly. Each unlaned violation teaches that this skill's absolutes are advisory.
 
@@ -21,6 +36,14 @@ Without these lanes the rule is an absolute that correct behaviour has to break:
 **When a failure's justification may have aged out, prove the merge resolves it without merging.** `git merge-tree --write-tree origin/<default> <branch>` computes the merged tree and mutates nothing — exit 0 plus the corrected blob in the resulting tree is proof, and it costs no branch state. Observed: a branch's last failing test was justified as "this file is byte-identical to the default branch" — true when measured, falsified when a neighbouring session merged the fix afterwards.
 
 **A check that was blocked is not a check that passed.** If `merge-tree` (or any preflight) could not run, that is missing evidence, not permission to reason around it.
+
+## Verify the tree that will land, not the branch tip
+
+Merge `origin/<default>` into the branch **first**, then gate. That is the tree that lands, and it front-loads the conflict work into the step that has room for it.
+
+One run did exactly this — gating *"on the tree that would land"* after merging the current default branch in — and another went further, making the merged default branch the **decisive** run rather than an extra one. That second run went red, and the red was real: the main checkout had been carrying a stale dependency tree for days, so every suite anyone had run there was measuring the wrong tree.
+
+**Under the fork lane a fork may not do this on its own**, because a fork performs no merge it was not ordered to perform. The orchestrator issues `MERGE origin/<default> BEFORE verify` in the same message as `GO <slug> verify <branch>`, having just re-fetched, so it names the SHA rather than leaving the fork to resolve it.
 
 <!-- split-addition -->
 
