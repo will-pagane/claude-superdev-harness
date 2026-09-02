@@ -61,6 +61,17 @@ DIRECTIVES = {"GO", "HOLD", "COORDINATE", "MERGE"}
 BOOKKEEPING = {
     "RULING", "READING", "ESCALATION", "RELAY", "PROFILE", "NOTE",
     "PENDINGS-SOURCE",
+    # PENDINGS-RULING: one per pendings entry a session-end fork ruled against
+    # its own diff - `PENDINGS-RULING <entry heading> <lane> <evidence>`, lane
+    # being resolved / stale-cause / moved / untouched. The fork RULES; the
+    # orchestrator performs the single write. Closing N branches in sequence
+    # runs Step 4's Half A N times over one file, and each pass can reopen what
+    # the last one closed.
+    "PENDINGS-RULING",
+    # CLOSED: an entry deleted because this run resolved it, named so the
+    # close-out can report closures, which are otherwise invisible - a run
+    # reported 13 opened and said nothing about 17 closed until asked.
+    "CLOSED",
 }
 KNOWN = CHECKPOINTS | DIRECTIVES | BOOKKEEPING
 
@@ -354,8 +365,16 @@ def main():
         if fork:
             sp.add_argument("--fork", help="spec slug; omit for the orchestrator ledger")
 
-    sp = sub.add_parser("init", help="create the orchestrator ledger")
-    common(sp, fork=False)
+    sp = sub.add_parser("init", help="create the orchestrator ledger, or a fork's")
+    # Until 2026-09-02 this was common(sp, fork=False), so --fork was not an
+    # accepted argument for init and target() could never resolve to
+    # fork-<slug>.md from here. cmd_append refuses when the file is absent and
+    # tells you to run init, so **a fork could not create its own ledger** by
+    # any route through this script. Every fork either hand-wrote the header or
+    # put its checkpoints somewhere the sweep does not read - which is the exact
+    # failure the sweep's format rule exists to prevent. Found by a fork at its
+    # own bootstrap, and it had to hand-write the header to report the finding.
+    common(sp)
     sp.add_argument("--run-id", required=True)
     sp.add_argument("--specs", default="")
     sp.set_defaults(func=cmd_init)

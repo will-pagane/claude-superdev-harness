@@ -204,13 +204,21 @@ Por isso a task de migration é ordenada o mais tarde possível, depois do códi
 
 **Durante o run: a orquestradora, sempre.** Ela é a única sessão com o quadro inteiro e a única que concede lock de migration e de deploy. Uma instrução mandada direto a uma filha atropela isso: a orquestradora ainda acredita que a filha está parada e pode conceder o lock a outra — dois `db push` simultâneos contra um banco só é exatamente o que a serialização existe para impedir. Quer um detalhe de uma filha? Pergunte à orquestradora; ela pergunta e relaya.
 
-**Depois do run: `/session-end`, uma vez por branch, em ordem de merge — numa sessão cujo diretório de trabalho *seja* o worktree.** Isso é mecânico, não estilístico: `session-end` lê `git branch --show-current` do diretório corrente e precisa sair dele para removê-lo no fim, então depende de cwd, não de `-C`.
+**Depois do run: `/session-end`, que agora tem três entradas e escolhe sozinho qual usar.**
 
-E aqui mora uma armadilha real: **nenhuma sessão do run está dentro do próprio worktree.** A orquestradora fica no checkout principal, e as filhas nascem na raiz do repositório e têm a entrada recusada (ver a nota sobre `EnterWorktree` abaixo). Então nem uma nem outra roda `/session-end` e acerta a branch sozinha. O caminho é abrir uma sessão *a partir* do worktree — `cd .claude/worktrees/‹slug›-‹data›` e iniciar ali.
+| Situação | Lane |
+|---|---|
+| Uma branch de feature, ou a default com um `handoff.md` de uma branch só | **inline** — Steps 0–10 como sempre |
+| A default **e** um `handoff.md` com `N ≥ 2` branches | **fork lane** — uma filha por branch faz a leitura (inventário, triagem da suíte, rulings de pendência); a orquestradora fica com tudo que é global: PR, merge, pós-merge, limpeza e **uma única escrita** do arquivo de pendências |
+| A default com worktrees e **sem** `handoff.md` | **sequencial** — entra em cada worktree por vez |
+
+A fork lane existe porque fechar cinco branches numa sessão só não morre de dificuldade, morre de contexto: são cinco inventários, cinco saídas de suíte e cinco diffs carregados ao mesmo tempo. Ela **exige** o `handoff.md`; sem ele não há lista de branches, ordem de merge nem project profile, e improvisar isso é exatamente o que o handoff existe para impedir.
+
+**A orquestradora não entra em worktree nenhuma.** Mergeia a partir do checkout principal e remove as worktrees de lá — o que também evita a restrição de bash composto que vale dentro de uma worktree.
 
 O que o run deixa pronto para essa sessão nova é o ledger: as linhas finais de `PARKED` e `CUT` de cada filha estão lá exatamente para que quem não construiu a branch consiga escrever pendências honestas. Se você preferir não sair da orquestradora, ela relaya — ela tem o quadro inteiro. O que ela não consegue é estar dentro de N worktrees.
 
-> **`EnterWorktree` não resolve isso.** Nesta build a ferramenta só troca *entre* worktrees; a primeira entrada, vinda do diretório de lançamento, é recusada — para a orquestradora e para toda filha, já que ambas nascem na raiz do repositório. Três filhas reproduziram o mesmo erro, e não é problema de path: `git worktree list --porcelain` devolve o caminho exato e o `pwd -P` de dentro bate byte a byte. Isolamento, no run, é disciplina: caminho absoluto em toda escrita, `cd` no worktree em todo bash, e `git -C ‹worktree› branch --show-current` conferido antes de cada commit. O gate de branch do repo é a rede, não a guarda.
+> **`EnterWorktree` recusa as filhas, não a orquestradora.** Esta nota já afirmou que a recusa valia para as duas; é falso, e o `steps/step-03-isolate.md` §3.2 da própria `session-build` foi corrigido antes desta. Três filhas reproduziram a recusa — e não é problema de path: `git worktree list --porcelain` devolve o caminho exato e o `pwd -P` de dentro bate byte a byte. **Uma sessão comum entra sem recusa:** uma orquestradora entrou em cinco worktrees em sequência e voltou com `ExitWorktree` a cada uma. A consequência prática é que a orquestradora *pode* rodar `/session-end` ela mesma, e a fork lane é uma escolha de contexto, não uma obrigação da ferramenta. Isolamento, no run, é disciplina: caminho absoluto em toda escrita, `cd` no worktree em todo bash, e `git -C ‹worktree› branch --show-current` conferido antes de cada commit. O gate de branch do repo é a rede, não a guarda.
 
 ---
 
