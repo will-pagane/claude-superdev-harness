@@ -56,3 +56,43 @@ One entry was ASSERTED FROM MEMORY AND THEN MEASURED before shipping — the cla
 published `CLAUDE.md` lags the live one. Confirmed by diff: the repo copy lacks the
 skill-invocation exception paragraph (live lines 61-67), and the live copy lacks the repo's
 "Optional tool imports" section, which is deliberately repo-only. Bidirectional and real.
+
+## Step 6 — SKIPPED, and not by a classifier refusal
+
+`merge_path: local-merge`. `gh pr list --state all` returns zero pull requests in this repo's
+entire history and both merge commits on `origin/main` are local. No `gh` call was attempted, so
+no refusal happened and none is reported.
+
+## Step 7 — merges, all four, zero conflicts
+
+`--no-ff` each, never `--squash` (history-preserving project). Order from the handoff:
+1. `refactor/session-end-router-fork-lane-20260902`
+2. `fix/skill-propagation-20260902`
+3. `feat/brainstorm-visual-companion-20260902`
+4. `docs/session-skills-specs-20260902`
+
+The three-way overlap (`ledger.md` plus the three spec documents) resolved by itself: A and B
+carry them at the shared base and never modified them; D advanced `ledger.md` alone.
+
+### Step 7.4 — gates on the MERGED tree, the measurement nobody else takes
+
+Green: `merged-ci-gates` EXIT 0 (35) · `merged-all-gates` EXIT 0 (62) · `assert-findings` 50/50 ·
+`budgets` · `xrefs` · `ledger-probe` 9/9 · `symlink-oracle` "probe and reality agree (both yes)".
+
+**RED, and it is a real finding rather than a merge defect:** `check-drift.sh --repo-only`
+EXIT 1, three line-ending violations —
+`skills/code-ultragraph-review/lib/{codex-refine.sh,verify.sh}` committed with CRLF against
+`*.sh text eol=lf`, and `hooks/reap-orphans.ps1` mixed against `*.ps1 text eol=crlf`.
+
+**Triaged `pre-existing-on-base`, and the proof is blob identity, not inference.**
+`git rev-parse b85ee86:<f>` equals `git rev-parse HEAD:<f>` for all three, and none of the four
+branches touches those paths. The merge changed nothing about them.
+
+**One instrument was rejected mid-triage for being structurally unable to fail on the claim.**
+The first reproduction exported the base with `git archive` and ran the check there: it returned
+CLEAN. `git archive` applies the `.gitattributes` `eol` filter on export, so it normalises exactly
+the condition under test. Re-measured with `git cat-file blob`, which returns raw object content:
+59, 47 and 115 CR bytes, identical at base and at HEAD.
+
+Recorded in `PENDINGS.md` on `docs/pendings-line-endings-20260902` and NOT fixed — this skill
+closes work out. The files belong to a skill no branch in this run touched.

@@ -67,6 +67,21 @@ repo público lê as três proibições sem a saída. Medido 2026-09-02 comparan
 `~/.claude/CLAUDE.md`. `scripts/check-drift.sh` **não pega isso**: ele varre `skills/` apenas.
 Unblock: copiar o parágrafo, e decidir se o check-drift passa a cobrir `CLAUDE.md` e `RTK.md`.
 
+### `OPEN` — três arquivos violam o `.gitattributes` no próprio banco de objetos
+
+Achado pelo `scripts/check-drift.sh --repo-only` na **primeira execução real dele**, sobre a `main`
+já mergeada. `skills/code-ultragraph-review/lib/codex-refine.sh` e `lib/verify.sh` estão commitados
+com CRLF contra `*.sh text eol=lf`; `hooks/reap-orphans.ps1` tem finais mistos contra
+`*.ps1 text eol=crlf`. Quebra o shebang em macOS/Linux, que é o motivo pelo qual o `.gitattributes`
+existe.
+Laneado `pre-existing-on-base` por **identidade de blob**: `git rev-parse b85ee86:<f>` e
+`HEAD:<f>` devolvem o mesmo hash nos três, e nenhuma das quatro branches deste run toca esses
+arquivos. Não é regressão do merge.
+**`git archive` é o instrumento errado aqui** — ele aplica o `eol` do `.gitattributes` na
+exportação, então reproduzir por export devolve "limpo" e esconde a condição. Use `git cat-file blob`.
+Unblock: `git add --renormalize` nesses caminhos, em commit próprio. Não feito aqui: esta skill
+fecha trabalho, não abre, e os arquivos pertencem a uma skill que este run não tocou.
+
 ### `GATED` — a job `symlink-probe-windows` só se prova na primeira execução do CI
 
 `.github/workflows/lint.yml`. Ela passa `--require-capable`, então um runner incapaz de criar
