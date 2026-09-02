@@ -39,11 +39,26 @@ Without these lanes the rule is an absolute that correct behaviour has to break:
 
 ## Verify the tree that will land, not the branch tip
 
-Merge `origin/<default>` into the branch **first**, then gate. That is the tree that lands, and it front-loads the conflict work into the step that has room for it.
+The branch tip is not what merges. **Gate the merged tree.** *How* you obtain that tree is a second, separate decision, and conflating the two is what produced the wrong rule the first time this was written.
 
-One run did exactly this — gating *"on the tree that would land"* after merging the current default branch in — and another went further, making the merged default branch the **decisive** run rather than an extra one. That second run went red, and the red was real: the main checkout had been carrying a stale dependency tree for days, so every suite anyone had run there was measuring the wrong tree.
+**Default, and always available: compute it without materialising it.**
 
-**Under the fork lane a fork may not do this on its own**, because a fork performs no merge it was not ordered to perform. The orchestrator issues `MERGE origin/<default> BEFORE verify` in the same message as `GO <slug> verify <branch>`, having just re-fetched, so it names the SHA rather than leaving the fork to resolve it.
+```
+git merge-tree --write-tree origin/<default> <branch>
+```
+
+It computes the merged tree, mutates nothing, costs no branch state and pollutes no pull-request diff. Step 1 already recommends it for the neighbouring question of whether an aged-out justification still holds; it is the same instrument.
+
+**Materialise the merge on the branch only when something downstream must re-run against the new base.** Two cases, both observed:
+
+- **CI whose green would otherwise answer the wrong question.** MCPlace `20260822-2020` merged `origin/main` into a branch on a **`pr`** project and pushed, deliberately: the pull request's CI had started *before* a sibling merged, so it had validated against a base with no drift guard. The run refused that green as evidence — *"a check that is structurally incapable of failing on the thing it is being cited for"* — merged the current default branch in, and re-ran. Merging was the correct fix, and a flat rule of "never materialise on a `pr` project" would have forbidden it.
+- **A correctness proof that only holds on the merged tree**, where computing the tree is not enough because something has to execute against it.
+
+**Say which of the two ran, and why, in the report.** A verification whose subject is unstated is a verification of something.
+
+One run went further still and made the merged default branch the **decisive** run rather than an extra one. It went red, and the red was real: the main checkout had been carrying a stale dependency tree for days, so every suite anyone had run there was measuring the wrong tree.
+
+**Under the fork lane a fork materialises nothing on its own**, because a fork performs no merge it was not ordered to perform. The orchestrator issues `MERGE origin/<default> BEFORE verify` alongside `GO <slug> verify <branch>`, having just re-fetched, so it names the SHA — and it issues that directive only in the two cases above. Otherwise the fork computes.
 
 <!-- split-addition -->
 
