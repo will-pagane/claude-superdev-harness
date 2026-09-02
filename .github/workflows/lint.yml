@@ -47,6 +47,14 @@ jobs:
             if ($errors) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
           }
 
+      - name: workflow e valido estruturalmente
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check 'PyYAML==6.0.3'
+          python3 scripts/validate-workflow.py .github/workflows/lint.yml
+
+      - name: invariantes do repo (SKILL.md por skill, fim de linha)
+        run: bash scripts/check-drift.sh --repo-only
+
   install-smoke:
     # Sintaxe valida nao prova que instalou: o bug que motivou este job era um
     # install.sh que rodava limpo e deixava o ~/.claude pela metade.
@@ -133,3 +141,54 @@ jobs:
         run: |
           echo '{}' | node statusline/statusline.mjs > /dev/null
           printf '' | node statusline/statusline.mjs > /dev/null
+
+  drift-check-works:
+    # O --repo-only nao enxerga divergencia entre o repo e uma instalacao, que e
+    # justamente a divergencia que este repo quer pegar. Um runner nao tem
+    # ~/.claude -- mas pode construir um, e ai o modo de comparacao fica
+    # testavel. Isto prova o INSTRUMENTO, nao a maquina de ninguem.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: instala numa CLAUDE_CONFIG_DIR temporaria
+        run: |
+          set -euo pipefail
+          echo "CLAUDE_CONFIG_DIR=$RUNNER_TEMP/claude-home" >> "$GITHUB_ENV"
+          CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude-home" ./install.sh --skills --copy
+
+      - name: sem divergencia logo apos instalar
+        run: bash scripts/check-drift.sh
+
+      - name: divergencia real e detectada
+        run: |
+          set -euo pipefail
+          target="$(find "$CLAUDE_CONFIG_DIR/skills" -name 'SKILL.md' -print -quit)"
+          test -n "$target" || { echo "nenhum SKILL.md instalado"; exit 1; }
+          echo "uma diferenca real" >> "$target"
+          if bash scripts/check-drift.sh; then
+            echo "FALHOU: o check ficou verde com divergencia real"; exit 1
+          fi
+          echo "ok: divergencia detectada"
+
+      - name: diferenca so de fim de linha e ignorada
+        run: |
+          set -euo pipefail
+          target="$(find "$CLAUDE_CONFIG_DIR/skills" -name 'SKILL.md' -print -quit)"
+          rel="${target#"$CLAUDE_CONFIG_DIR/skills/"}"
+          sed 's/$/\r/' "skills/$rel" > "$target"
+          bash scripts/check-drift.sh
+
+  symlink-probe-windows:
+    # O unico job capaz de ficar vermelho se alguem tirar
+    # MSYS=winsymlinks:nativestrict do can_symlink(). Nenhum job Linux consegue:
+    # o bug e especifico do Git Bash no Windows.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: o probe do install.sh concorda com a realidade da maquina
+        run: bash scripts/symlink-oracle.sh --require-capable
