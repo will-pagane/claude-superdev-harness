@@ -56,8 +56,12 @@ quando contexto está escasso.
 `git check-ignore -v .claude/worktrees` não devolve nada. `.gitignore:5` tem `.claude.json`, que
 casa com um `grep ^\.claude` ingênuo e não ignora diretório nenhum. Um `git add -A` neste repo
 empacota worktrees inteiras. Achado por falso positivo de grep e re-medido com `git check-ignore`,
-que é o check capaz de falhar na afirmação. Conserto: uma linha, `.claude/worktrees/`.
-Não feito no run que o encontrou: estava fora da superfície das duas specs.
+que é o check capaz de falhar na afirmação.
+**`__pycache__/` tem o mesmo buraco e foi medido no close-out**: rodar os próprios gates de Python
+do repo (`python -m py_compile` sobre `skills/**/*.py` e `scripts/**/*.py`) suja a árvore em três
+diretórios, e nada os ignora. Quem roda os gates do repo tem de limpar à mão.
+Conserto: duas linhas, `.claude/worktrees/` e `__pycache__/`.
+Não feito no run que os encontrou: fora da superfície das duas specs, e esta skill fecha trabalho.
 
 ### `OPEN` — o `CLAUDE.md` publicado está atrás do vivo
 

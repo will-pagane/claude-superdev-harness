@@ -96,3 +96,43 @@ the condition under test. Re-measured with `git cat-file blob`, which returns ra
 
 Recorded in `PENDINGS.md` on `docs/pendings-line-endings-20260902` and NOT fixed — this skill
 closes work out. The files belong to a skill no branch in this run touched.
+
+## Step 7 — MERGED, confirmed by ancestry
+
+`origin/main` `b85ee86` → `dfa73d1`. Five merge commits, `--no-ff`, no squash:
+`487dc21` A · `4d64cfc` B · `6daa775` C · `7e7fef3` D · `dfa73d1` the pendings addendum.
+
+Confirmed with `git branch -r --contains <sha>` for all five tips, never with a command's
+silence. All five list `origin/main`.
+
+## Step 8 — post-merge sync
+
+1. **Redeploy: NOTHING TO DO.** No deployable functions in this repo, so the "a push to the
+   default branch reverts your branch deploy" trap cannot fire. Checked claim.
+2. **Regenerate generated files: NOTHING TO DO.** No schema, no hook-owned generated files.
+3. Main checkout is the merged state — the merge was performed here. `git rev-parse HEAD` equals
+   `git rev-parse origin/main` at `dfa73d1`.
+4. **Gates re-run on the FINAL merged main**, after the addendum moved it:
+   `final-ci-gates` EXIT 0 (35) · `final-all-gates` EXIT 0 (62) · `final-assert-findings` 50/50 ·
+   `final-budgets` EXIT 0 · `final-xrefs` EXIT 0.
+
+## Step 9 — cleanup
+
+- Stranding proved FIRST: `git log <branch> --not origin/main` returned 0 commits for all five.
+  All three worktrees clean.
+- Nothing stranded by removal: both codex-review run directories are committed and now live on
+  `main` (6 files), so no pendings reference became a dead pointer.
+- Three worktrees removed from the MAIN checkout — this session was never inside one.
+- Remote refs deleted first, then `git branch -d` (lowercase, which refuses unmerged work)
+  succeeded on all five. **No `-D` was needed**, and that acceptance is itself the containment
+  proof.
+- `git fetch --prune`: `git worktree list` shows only the main checkout; `git branch -a` shows
+  only `main`.
+- **Twice during this close-out the run's own Python gate dirtied the tree** with `__pycache__`
+  directories that nothing gitignores. Cleaned both times by hand; recorded in `PENDINGS.md`
+  alongside the `.claude/` gap rather than fixed.
+
+## Step 10 — report
+
+Delivered. Variant B — local merge, no PR, and the reason is demonstrated practice rather than a
+classifier refusal: this repo has never had a pull request.
