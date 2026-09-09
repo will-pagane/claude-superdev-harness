@@ -1,4 +1,4 @@
-# claude-setup
+# claude-superdev-harness
 
 Minha configuração pessoal do [Claude Code](https://claude.com/claude-code) — CLAUDE.md global, statusline custom, skills próprias, e a stack de plugins de terceiro que uso todo dia.
 
@@ -47,13 +47,13 @@ Sem ele, o script **copia e diz que copiou**. Copia funciona igual, com uma dife
 ## Instalação
 
 ```bash
-git clone https://github.com/will-pagane/claude-setup.git
-cd claude-setup
+git clone https://github.com/will-pagane/claude-superdev-harness.git
+cd claude-superdev-harness
 
 ./install.sh --dry-run     # mostra o que faria, não escreve nada
 ./install.sh               # CLAUDE.md + RTK.md + statusline + hooks + skills
 ./install.sh --settings    # liga o statusline no seu settings.json (com backup)
-./install.sh --third-party # detecta e instala/instrui superpowers, caveman, impeccable, rtk, graphify, codex
+./install.sh --third-party # detecta e instala/instrui superpowers, caveman, impeccable, ponytail, rtk, graphify, codex
 ```
 
 Depois, **reinicie o Claude Code** — skills e statusline são carregados na abertura da sessão.
@@ -179,10 +179,13 @@ Cada um no seu próprio repo — listo e aponto pro oficial, não vendorizo (o r
 | `graphify` | Transforma qualquer pasta num grafo de conhecimento navegável — base do `code-ultragraph-review` | [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | `uv tool install graphifyy` (ou `pipx install graphifyy`) depois `graphify install` |
 | `codex` CLI | O crítico do `codex-review` e do `session-build` | [openai/codex](https://github.com/openai/codex) | `npm i -g @openai/codex` depois `codex login` |
 | `impeccable` | Design/crítica de UI, sistema de design | [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | `/plugin marketplace add pbakaus/impeccable` depois `/plugin install impeccable` |
+| `ponytail` | Escada de preguiça antes de escrever código: existe mesmo? já tem no repo? stdlib? plataforma? dependência instalada? uma linha? — sem nunca cortar validação, segurança e acessibilidade | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | `/plugin marketplace add DietrichGebert/ponytail` depois `/plugin install ponytail@ponytail` |
 
 Dentro do Claude Code os comandos são `/plugin ...`; fora dele, o mesmo pelo CLI: `claude plugin marketplace add <repo>` e `claude plugin install <nome>@<marketplace>`. É esse segundo caminho que o `--third-party` usa, porque roda sem TTY.
 
-Os **três plugins** (`superpowers`, `caveman`, `impeccable`) o `--third-party` instala sozinho — são código que roda dentro do Claude Code, e o marketplace de cada um é declarado no `settings.example.json`. **RTK, graphify e codex ele não instala**: são binários no seu sistema, e instalar software na máquina de alguém sem a pessoa mandar não é papel de um instalador de config. Detecta, imprime o comando certo pro seu sistema, e para.
+Os **quatro plugins** (`superpowers`, `caveman`, `impeccable`, `ponytail`) o `--third-party` instala sozinho — são código que roda dentro do Claude Code, e o marketplace de cada um é declarado no `settings.example.json`. **RTK, graphify e codex ele não instala**: são binários no seu sistema, e instalar software na máquina de alguém sem a pessoa mandar não é papel de um instalador de config. Detecta, imprime o comando certo pro seu sistema, e para.
+
+**`caveman` e `ponytail` convivem, e são coisas diferentes.** O caveman comprime a *prosa* da resposta; o ponytail comprime o *código* que a resposta escreve. Os dois injetam contexto em todo `UserPromptSubmit`, então o custo de tê-los juntos é dois preâmbulos por prompt — o próprio benchmark do ponytail roda os dois como braços separados, não como alternativa um do outro. O ponytail precisa de `node` no PATH (mesmo pré-requisito do statusline); sem ele as skills ainda funcionam, só a ativação sempre-ligada fica quieta.
 
 ## Conteúdos pra assistir
 

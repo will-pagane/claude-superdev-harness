@@ -52,11 +52,12 @@
     ]
   },
 
-  "$comment_plugins": "superpowers vem do marketplace oficial, que ja e conhecido — so caveman e impeccable precisam ser declarados em extraKnownMarketplaces. './install.sh --third-party' faz os tres por CLI.",
+  "$comment_plugins": "superpowers vem do marketplace oficial, que ja e conhecido — caveman, impeccable e ponytail precisam ser declarados em extraKnownMarketplaces. './install.sh --third-party' faz os quatro por CLI.",
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "caveman@caveman": true,
-    "impeccable@impeccable": true
+    "impeccable@impeccable": true,
+    "ponytail@ponytail": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -64,6 +65,9 @@
     },
     "impeccable": {
       "source": { "source": "github", "repo": "pbakaus/impeccable" }
+    },
+    "ponytail": {
+      "source": { "source": "github", "repo": "DietrichGebert/ponytail" }
     }
   },
 
