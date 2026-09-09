@@ -1,4 +1,4 @@
-# claude-setup
+# claude-superdev-harness
 
 Minha configuração pessoal do [Claude Code](https://claude.com/claude-code) — CLAUDE.md global, statusline custom, skills próprias, e a stack de plugins de terceiro que uso todo dia.
 
@@ -47,8 +47,8 @@ Sem ele, o script **copia e diz que copiou**. Copia funciona igual, com uma dife
 ## Instalação
 
 ```bash
-git clone https://github.com/will-pagane/claude-setup.git
-cd claude-setup
+git clone https://github.com/will-pagane/claude-superdev-harness.git
+cd claude-superdev-harness
 
 ./install.sh --dry-run     # mostra o que faria, não escreve nada
 ./install.sh               # CLAUDE.md + RTK.md + statusline + hooks + skills
