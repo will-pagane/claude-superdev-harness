@@ -226,7 +226,8 @@ third_party() {
     for entry in \
       "claude-plugins-official|anthropics/claude-plugins-official|superpowers" \
       "caveman|JuliusBrussee/caveman|caveman" \
-      "impeccable|pbakaus/impeccable|impeccable"
+      "impeccable|pbakaus/impeccable|impeccable" \
+      "ponytail|DietrichGebert/ponytail|ponytail"
     do
       IFS='|' read -r market repo plugin <<< "$entry"
       if claude plugin list 2>/dev/null | grep -q "$plugin@"; then
@@ -248,6 +249,10 @@ third_party() {
     info "        /plugin install superpowers"
     info "        /plugin marketplace add JuliusBrussee/caveman"
     info "        /plugin install caveman"
+    info "        /plugin marketplace add pbakaus/impeccable"
+    info "        /plugin install impeccable"
+    info "        /plugin marketplace add DietrichGebert/ponytail"
+    info "        /plugin install ponytail"
   fi
 
   # RTK e graphify sao binarios, nao plugins — instalar software de terceiro
@@ -372,7 +377,7 @@ if [ "$DO_SETTINGS" = false ] && [ "$DO_CORE" = true ]; then
   info
 fi
 if [ "$DO_THIRD_PARTY" = false ]; then
-  info "Superpowers, caveman, rtk, graphify e codex nao foram tocados — ${DIM}./install.sh --third-party${RST} detecta e instrui cada um."
+  info "Superpowers, caveman, impeccable, ponytail, rtk, graphify e codex nao foram tocados — ${DIM}./install.sh --third-party${RST} detecta e instrui cada um."
   info
 fi
 if [ "$warns" -gt 0 ]; then
