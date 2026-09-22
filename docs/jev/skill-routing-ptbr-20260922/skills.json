@@ -1,0 +1,274 @@
+[
+ {
+  "name": "brainiac-calendar-manager",
+  "description": "Secretário de Google Calendar do Will (subsistema Calendar Watch do Brainiac). Roda 1x/dia em dias úteis às 8am, espelha a agenda passada e futura do primary do Will no vault (calendar/YYYY-MM.md, horizonte rolante 3m + 3m, linkando meeting records), age na agenda dentro de uma cerca de escrita autônoma com verificador adversarial fail-closed (auto-aceite de convite interno, bloco de foco em dia l"
+ },
+ {
+  "name": "brainiac-context-maintenance",
+  "description": "Executa manutencao de contexto — varredura profunda do vault com cross-reference externo, guided refresh interativo com Will e aplicacao de atualizacoes"
+ },
+ {
+  "name": "brainiac-create-lesson",
+  "description": "Cria roteiros de aulas a partir de referencias, transcricoes ou visao original — com research profundo e orientacao e-commerce"
+ },
+ {
+  "name": "brainiac-create-presentation",
+  "description": "Cria apresentações de slides em HTML renderizadas em PNG transparente — extração de design system, outline interativo, autoria slide-a-slide com preview live, slide chains, density modes"
+ },
+ {
+  "name": "brainiac-create-talk",
+  "description": "Cria e refina conteúdo de palestra presencial em loop de ditado · build loop com captura, refinamento, sugestões de melhoria, elicitação de história, dispara reviewers críticos no fim de cada ato, handoff pra brainiac-create-presentation"
+ },
+ {
+  "name": "brainiac-daily-brief",
+  "description": "Inicia briefing executivo e planejamento colaborativo do dia"
+ },
+ {
+  "name": "brainiac-extract-design-system",
+  "description": "Extrai design system JSON + CSS de imagens de referência ou padroniza um existente — palette, typography, layout, components, validation gates (WCAG, fonts)"
+ },
+ {
+  "name": "brainiac-gmail-manager",
+  "description": "Secretário pessoal de Gmail do Will. Roda 1x/dia em dias úteis, lê a inbox inteira da janela desde o último run, vê corpo e anexos, e raciocina por email se o Will quer ou não ler aquilo (tier de relevância + linha de \"por que ver / por que ignorar\"). Organiza a inbox (aplica labels, auto-arquiva ruído de alta confiança, cria labels de destaque, sugere parâmetros de filtro server-side). Persiste E"
+ },
+ {
+  "name": "brainiac-process-mentoria",
+  "description": "Processa encontro de mentoria (mentee-cêntrico) e conduz debriefing interativo com Will · fonte plural (Gemini ou áudio) · disparável headless pelo brainiac-calendar-manager"
+ },
+ {
+  "name": "brainiac-render-presentation",
+  "description": "Renderiza deck HTML em PNGs transparentes 1920×1080 via Playwright + atualiza deck.md e Project.md"
+ },
+ {
+  "name": "brainiac-sync",
+  "description": "Sincroniza repositorio local com remote (pull, commit all, push)"
+ },
+ {
+  "name": "brainiac-talk-review",
+  "description": "Auditoria crítica de palestras · roda Storytelling Architect e Didactic Reviewer em paralelo (ou um só) sobre um arquivo de talk content. Invocável standalone ou pelo brainiac-create-talk."
+ },
+ {
+  "name": "col-prepare-meeting",
+  "description": "Prepara uma reunião de projeto ou um discovery de cliente novo, a partir do vault, que é a única fonte. Ative quando Will pedir em qualquer forma \"vou me preparar pra reunião de X\", \"me prepara pra call da Y\", \"/col-prepare-meeting <projeto>\", \"monta o prep do discovery com Z\". Orientada a projeto, não a pessoa. Roda interativa, headless (disparada pelo brainiac-calendar-manager) e em modo discove"
+ },
+ {
+  "name": "col-process-meeting",
+  "description": "Processa a transcricao de uma reuniao de projeto ou demanda, conduz o debriefing interativo com Will e salva o registro no vault, que e o unico destino. Reuniao e action items ficam so no vault, para projeto pessoal, NOVARC ou de cliente; artefatos do cliente so quando Will pedir. Fonte plural (fathom, google-meet, gemini, audio, notas), sempre informada por Will."
+ },
+ {
+  "name": "col-session-sync",
+  "description": "Captura o contexto da sessão atual e distribui pelos arquivos do vault do Chief of Life (context, projects, people, clients, mentorias, knowledge, coach, memory). Vault-first, roda offline, sem depender de Slack ou ClickUp. Ative no fim de uma conversa que gerou decisões ad-hoc, atualização de projeto ou pessoa, pendência, ou know-how durável, e quando Will pedir em qualquer forma \"/col-session-sy"
+ },
+ {
+  "name": "novarc-design",
+  "description": "Use this skill to generate well-branded interfaces and assets for NovArc, either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, and UI kit components for protoyping."
+ },
+ {
+  "name": "novarc-proposta",
+  "description": "Gerar uma proposta comercial da NOVARC como Artifact na marca, e registrar tudo no vault. Ative quando Will pedir proposta em qualquer forma \"faz uma proposta pro Rivan\", \"monta a proposta da Brinkanto\", \"preciso mandar proposta pra esse cliente\", \"gera a proposta do projeto X\", \"atualiza a proposta com o valor novo\". Conduz o levantamento como thought partner, monta o documento a partir do modelo"
+ },
+ {
+  "name": "code-ultragraph-jeview",
+  "description": "Use when the user asks for an extensive, maximum-quality, whole-codebase review or audit AND wants the synthesis half done in code rather than by agents. Same graph gate and same multi-agent discovery as code-ultragraph-review, but dedup, severity calibration and db routing run on the main thread as typed judgments (TypeSafe Jev) with every merge performed by code, which removes the parent skill's"
+ },
+ {
+  "name": "code-ultragraph-review",
+  "description": "Use when the user asks for an extensive, maximum-quality, whole-codebase review or audit and wants a consolidated findings report (read-only, default). Add `--autopilot` to run a fully autonomous performance pipeline: read Supabase signals, deep-dive via dynamic workflows, refine fixes with a headless Codex pass, apply fixes (parallel workflow + subagent-driven-development), verify with auto-repai"
+ },
+ {
+  "name": "codex-build",
+  "description": "Hand a frozen spec (PLAN.md or any locked plan) to OpenAI Codex to IMPLEMENT with full write access, while Claude stays the spec-writer and reviewer — the exact role-flip of /codex-review. Codex builds from the spec in a --yolo sandbox, Claude reads the full diff like a contributor PR, runs the proof test, and iterates fixes via the SAME Codex session up to MAX_FIX_ROUNDS before taking over. Human"
+ },
+ {
+  "name": "codex-review",
+  "description": "A standalone adversarial PLAN-review loop where Claude Code (builder) and OpenAI Codex (read-only critic) tag-team an implementation plan before any code is written. Use this when you ALREADY have a plan or a clear idea and just want the cross-model stress-test — no requirements interview first. Claude drafts/loads the plan into PLAN.md, Codex reviews it in a read-only sandbox and returns VERDICT:"
+ },
+ {
+  "name": "firecrawl",
+  "description": "| Search, scrape, and interact with the web via the Firecrawl CLI. Use this skill whenever the user wants to search the web, find articles, research a topic, look something up online, scrape a webpage, grab content from a URL, get data from a website, crawl documentation, download a site, or interact with pages that need clicks or logins. Also use when they say \"fetch this page\", \"pull the content"
+ },
+ {
+  "name": "firecrawl-agent",
+  "description": "| AI-powered autonomous data extraction that navigates complex sites and returns structured JSON. Use this skill when the user wants structured data from websites, needs to extract pricing tiers, product listings, directory entries, or any data as JSON with a schema. Triggers on \"extract structured data\", \"get all the products\", \"pull pricing info\", \"extract as JSON\", or when the user provides a J"
+ },
+ {
+  "name": "firecrawl-build",
+  "description": "Integrate Firecrawl into application code whenever a product, agent, or workflow needs web data inside the app: web search, live search results, page scraping, structured extraction, or browser interaction. Use when building any feature that needs data from the web in code, even if the user does not mention Firecrawl explicitly and only describes wanting web data, website content, search, scraping"
+ },
+ {
+  "name": "firecrawl-build-interact",
+  "description": "Integrate Firecrawl `/interact` into product code for dynamic pages and browser actions after scraping. Use when a feature needs clicks, form fills, pagination, authentication-aware flows, or other multi-step interactions that plain `/scrape` cannot complete."
+ },
+ {
+  "name": "firecrawl-build-onboarding",
+  "description": "Get Firecrawl credentials and SDK setup into a project. Use when an application needs `FIRECRAWL_API_KEY`, when an agent should add Firecrawl to `.env`, when the user wants to authenticate Firecrawl for app code, or when choosing the first SDK and docs for a new Firecrawl integration. This skill includes its own browser auth flow, so it does not depend on the website onboarding skill."
+ },
+ {
+  "name": "firecrawl-build-scrape",
+  "description": "Integrate Firecrawl `/scrape` into product code for single-page extraction. Use when an app already has a URL and needs markdown, HTML, links, screenshots, metadata, or structured page output. Prefer this skill over broader crawl patterns when the feature is page-level."
+ },
+ {
+  "name": "firecrawl-build-search",
+  "description": "Integrate Firecrawl `/search` into product code and agent workflows. Use when an app needs discovery before extraction, when the feature starts with a query instead of a URL, or when the system should search the web and optionally hydrate result content."
+ },
+ {
+  "name": "firecrawl-company-directories",
+  "description": "Extract structured company lists from directories with Firecrawl. Use for scraping YC, Crunchbase, Product Hunt, G2, startup directories, category directories, or custom company databases into JSON, CSV, CRM-ready lists, or research tables."
+ },
+ {
+  "name": "firecrawl-competitive-intel",
+  "description": "Monitor competitor pricing, features, changelogs, dashboards, and product changes with Firecrawl. Use for recurring competitive intelligence, pricing tier extraction, feature change tracking, or structured competitor alerts."
+ },
+ {
+  "name": "firecrawl-crawl",
+  "description": "| Bulk extract content from an entire website or site section. Use this skill when the user wants to crawl a site, extract all pages from a docs section, bulk-scrape multiple pages following links, or says \"crawl\", \"get all the pages\", \"extract everything under /docs\", \"bulk extract\", or needs content from many pages on the same site. Handles depth limits, path filtering, and concurrent extraction"
+ },
+ {
+  "name": "firecrawl-dashboard-reporting",
+  "description": "Pull metrics from analytics dashboards and internal web tools with Firecrawl browser. Use when the user needs dashboard reporting, cross-platform metric summaries, authenticated analytics extraction, date-range reports, or structured metrics from web dashboards."
+ },
+ {
+  "name": "firecrawl-deep-research",
+  "description": "| Produce an intensive, cited analytical report: executive summary, multi-angle findings, contrarian views, open questions, and full sources. Use only when the user needs rigorous synthesis of a complex topic (scientific, technical, policy, or market-analytical) that cannot be answered with a short search, and wants a formal written report, not a recommendation list. Do not use for product picks, "
+ },
+ {
+  "name": "firecrawl-demo-walkthrough",
+  "description": "Walk through a product's key flows with Firecrawl browser and produce a structured UX/product walkthrough. Use for signup, onboarding, pricing, docs, dashboard, product demo prep, UX teardown, and first-run experience analysis."
+ },
+ {
+  "name": "firecrawl-download",
+  "description": "| Download an entire website as local files — markdown, screenshots, or multiple formats per page. Use this skill when the user wants to save a site locally, download documentation for offline use, bulk-save pages as files, or says \"download the site\", \"save as local files\", \"offline copy\", \"download all the docs\", or \"save for reference\". Combines site mapping and scraping into organized local di"
+ },
+ {
+  "name": "firecrawl-interact",
+  "description": "| Control and interact with a live browser session on any scraped page — click buttons, fill forms, navigate flows, and extract data using natural language prompts or code. Use when the user needs to interact with a webpage beyond simple scraping: logging into a site, submitting forms, clicking through pagination, handling infinite scroll, navigating multi-step checkout or wizard flows, or when a "
+ },
+ {
+  "name": "firecrawl-knowledge-base",
+  "description": "Build a knowledge base from web content with Firecrawl. Use for local reference docs, RAG-ready chunks, fine-tuning datasets, documentation mirrors, topic corpora, or LLM-ready markdown organized from web sources."
+ },
+ {
+  "name": "firecrawl-knowledge-ingest",
+  "description": "Ingest public or authenticated knowledge bases and docs portals with Firecrawl browser. Use for JS-heavy docs, login-gated portals, paginated help centers, support knowledge bases, or structured JSON/markdown extraction from documentation sites."
+ },
+ {
+  "name": "firecrawl-lead-gen",
+  "description": "Generate structured lead lists from prospect databases and web directories with Firecrawl browser. Use for finding prospects by role, company type, industry, stage, location, technologies, or other criteria and exporting CRM-ready JSON or CSV."
+ },
+ {
+  "name": "firecrawl-lead-research",
+  "description": "Produce pre-meeting lead intelligence briefs with Firecrawl. Use when the user needs company research, person research, recent news, talking points, pain points, or outreach preparation before a sales call, partnership meeting, investor conversation, or customer interview."
+ },
+ {
+  "name": "firecrawl-map",
+  "description": "| Discover and list all URLs on a website, with optional search filtering. Use this skill when the user wants to find a specific page on a large site, list all URLs, see the site structure, find where something is on a domain, or says \"map the site\", \"find the URL for\", \"what pages are on\", or \"list all pages\". Essential when the user knows which site but not which exact page."
+ },
+ {
+  "name": "firecrawl-market-research",
+  "description": "Extract market, financial, earnings, industry, and company metrics with Firecrawl. Use when the user asks for market research, industry trends, public company data, financial comparisons, earnings research, or structured market reports."
+ },
+ {
+  "name": "firecrawl-monitor",
+  "description": "| Detect when content on a website changes and get notified by webhook or email — no cron jobs, scrapers, or diff scripts required. Use this skill whenever the user wants to track changes on a page, watch competitor pricing, alert on new job postings or blog posts, monitor docs/changelog/status pages, or says \"monitor\", \"watch\", \"track\", \"alert me when\", \"notify when X changes\", \"ping me if\", \"ema"
+ },
+ {
+  "name": "firecrawl-parse",
+  "description": "| Efficiently extract and convert the contents of any local file—such as PDF, DOCX, DOC, ODT, RTF, XLSX, XLS, or HTML—into clean, well-formatted markdown saved to disk. Use this skill whenever the user requests to parse, read, or extract information from a file on their computer, including phrases like “parse this PDF”, “convert this document”, “read this file”, “extract text from”, or when a loca"
+ },
+ {
+  "name": "firecrawl-qa",
+  "description": "QA test a live website with Firecrawl browser and scrape evidence. Use when the user wants exploratory QA, form testing, navigation/link checks, responsive checks, performance observations, bug reports, or a pre-launch quality review."
+ },
+ {
+  "name": "firecrawl-research-index",
+  "description": "Find the papers that answer a research query with Firecrawl Research, using semantic search, semantic and structural expansion, and in-body verification. Always use this skill for any literature-finding / paper-retrieval task — single-paper lookups or full multi-paper sets."
+ },
+ {
+  "name": "firecrawl-research-papers",
+  "description": "Find and synthesize research papers, whitepapers, PDFs, technical reports, and academic sources with Firecrawl Research, using semantic paper search, related-paper expansion, and in-body verification. Use when the user wants a literature review, paper summary, research landscape, or sourced synthesis from PDFs and scholarly/industry publications."
+ },
+ {
+  "name": "firecrawl-scrape",
+  "description": "| Extract clean markdown from any URL, including JavaScript-rendered SPAs. Use this skill whenever the user provides a URL and wants its content, says \"scrape\", \"grab\", \"fetch\", \"pull\", \"get the page\", \"extract from this URL\", or \"read this webpage\". Handles JS-rendered pages, multiple concurrent URLs, and returns LLM-optimized markdown. Use this instead of WebFetch for any webpage content extract"
+ },
+ {
+  "name": "firecrawl-search",
+  "description": "| Web search with full page content extraction. Use this skill whenever the user asks to search the web, find articles, research a topic, look something up, find recent news, discover sources, or says \"search for\", \"find me\", \"look up\", \"what are people saying about\", or \"find articles about\". Returns real search results with optional full-page markdown — not just snippets. Provides capabilities b"
+ },
+ {
+  "name": "firecrawl-seo-audit",
+  "description": "Audit a website's SEO with Firecrawl. Use when the user asks for an SEO audit, metadata and heading review, sitemap/site-structure analysis, keyword opportunities, competitor SERP comparison, or prioritized search optimization recommendations."
+ },
+ {
+  "name": "firecrawl-shop",
+  "description": "Research products across the web with Firecrawl and produce a shopping recommendation or cart-ready summary. Use when the user wants to compare products, find the best option, evaluate reviews, respect budget/preferences, or shop with a saved browser session."
+ },
+ {
+  "name": "firecrawl-website-design-clone",
+  "description": "Extract any website's design system into an agent-ready DESIGN.md using Firecrawl scrape evidence. Use when the user wants colors, fonts, spacing, components, layout patterns, or brand/UI guidance from a website so AI agents can create new websites, clone a look, or build pages inspired by that design."
+ },
+ {
+  "name": "firecrawl-workflows",
+  "description": "Run outcome-focused Firecrawl workflows that produce deliverables such as research reports, SEO audits, QA reports, lead lists, knowledge bases, website design systems, and other structured web-data artifacts. Use when the user wants Firecrawl to complete a business, marketing, product, or creative workflow rather than merely scrape a page or integrate API calls into code."
+ },
+ {
+  "name": "graphify",
+  "description": "\"Use for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question should be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools.\""
+ },
+ {
+  "name": "grill-me-codex",
+  "description": "Two-act plan hardening. ACT 1 (you ↔ Claude) — Claude interviews you relentlessly about a plan or design, one question at a time, recommending an answer for each and exploring the codebase when it can answer itself, until every branch of the decision tree is resolved. ACT 2 (Claude ↔ Codex) — Claude writes the locked plan to PLAN.md and OpenAI Codex adversarially reviews it in a read-only sandbox "
+ },
+ {
+  "name": "grill-with-docs-codex",
+  "description": "Two-act plan hardening with living documentation. ACT 1 (you ↔ Claude) — Claude interviews you relentlessly about a plan, one question at a time, challenging it against your project's existing domain model and glossary (CONTEXT.md), sharpening fuzzy terms, stress-testing with concrete scenarios, cross-referencing code, and updating CONTEXT.md + ADRs inline as decisions crystallise. ACT 2 (Claude ↔"
+ },
+ {
+  "name": "hermes-ask",
+  "description": "| Talk to Willian's Hermes Agent running on his Hostinger VPS — ask it something, send it a task, show it an image, or hold a multi-turn conversation with it. Use whenever the user says \"pergunta pro Hermes\", \"manda o Hermes fazer X\", \"fala com o Hermes\", \"ask Hermes\", \"send this to the agent\", or refers to \"o agente da VPS\". Also use when you need a second machine to run something on that box. No"
+ },
+ {
+  "name": "hermes-vps",
+  "description": "| Operate Willian's Hostinger VPS and the Hermes Agent container on it — check status, provision capabilities, inspect the browser session, read logs, manage firewall and services. Use when the user says \"como esta a VPS\", \"checa o servidor\", \"o Hermes ta de pe?\", \"instala X no container\", \"abre porta\", \"olha o log do agente\", or asks for anything about that machine's health, security or configura"
+ },
+ {
+  "name": "scroll-craft",
+  "description": "> Build a premium, scroll-driven interactive landing page for any business: a service company, a physical product, a food brand, a drink brand. Scroll becomes the timeline. Video scrubs frame by frame under the wheel, sections pin and advance, rails pan sideways, headlines assemble line by line, the page ground shifts colour as you travel, and the pointer moves things that are not scrolling. Inter"
+ },
+ {
+  "name": "session-build",
+  "description": "Use when the user wants an idea taken from conversation to implemented, pushed branches in one pass — \"/session-build <ideia>\", \"builda isso\", \"brainstorma e implementa\", \"aprimore ao máximo\", \"faça as melhorias\", \"vamos mapear e escrever estas specs\", \"pega essa ideia e leva até a branch pronta\". ALSO invoke mid-conversation without being asked: if this conversation has already produced a spec, a"
+ },
+ {
+  "name": "session-end",
+  "description": "Use when branch work is finished and the user asks to close the session out — \"/session-end\", \"encerra a sessão\", \"fecha essa branch\", \"vamos encerrar aqui\", \"abre o PR e faz o merge\", \"leva até o merge e limpa a branch\", \"finaliza e limpa o worktree\". Also OFFER it (do not auto-run it) when the user signals closure without naming it — \"deixa tudo pronto\", \"o que falta a gente fazer?\", \"zera esses"
+ },
+ {
+  "name": "session-handoff",
+  "description": "Use when the user wants to hand off, transfer, pause, or continue the current session in a new session or with another agent — asks for a \"session handoff\", a \"prompt para a próxima sessão\", to \"continuar de onde paramos\", or invokes /session-handoff; also when context is running low and in-flight work must survive a session boundary. Produces one self-contained, copy-pasteable prompt."
+ },
+ {
+  "name": "site-motion-craft",
+  "description": "Use when adding animation, scroll effects, transitions, hover states or an attention-grabbing hero moment to a website, when choosing between Motion/framer-motion and CSS-native approaches, or when animation is hurting performance or accessibility. Covers a motion token system, ready-to-use animation patterns, a catalogue of signature hero moments with their performance costs, and the interaction "
+ },
+ {
+  "name": "site-page-architecture",
+  "description": "Use when deciding what pages a site needs, what sections a page needs and in what order, how navigation and information architecture should work, where CTAs go and how often, how a pricing page should be structured, when diagnosing why a page is not converting, or when redesigning or migrating a site that already has traffic, rankings and inbound links. Covers page blueprints per page type, CRO he"
+ },
+ {
+  "name": "site-ship",
+  "description": "Use when implementing a website in Next.js, structuring the project, choosing a CMS or content strategy, wiring forms and lead capture, optimizing Core Web Vitals, doing technical SEO or accessibility work, building a cookie/consent banner or adding third-party scripts, shipping a multi-locale site, shipping to a Brazilian audience (LGPD, WhatsApp, local performance), running the pre-launch checkl"
+ },
+ {
+  "name": "site-strategy-copy",
+  "description": "Use when scoping a website engagement, writing or auditing website copy, defining product positioning and messaging, running a discovery interview with a founder, deciding what a hero section should say, handling buyer objections on a page, judging whether existing site copy is differentiated, building a site for a product with no customers or proof yet, or writing a site in Brazilian Portuguese. "
+ },
+ {
+  "name": "site-visual-qa",
+  "description": "Use when a website or page has been built and needs to be judged on how it actually looks and behaves — screenshot review, design critique, responsive and dark/light checks, pre-launch visual gate, or \"why does this still look off?\". Runs a structured screenshot-critique-fix loop using real rendered output instead of self-assessment."
+ },
+ {
+  "name": "site-visual-system",
+  "description": "Use when establishing or auditing the visual design of a website — colour palette, typography, spacing, design tokens, dark mode, layout composition, product screenshots, OG/share cards, logo walls, iconography — when building inside an existing brand's guidelines, or whenever the goal is to make a site look genuinely expensive rather than like a template. Covers a copy-paste token system, the aes"
+ }
+]

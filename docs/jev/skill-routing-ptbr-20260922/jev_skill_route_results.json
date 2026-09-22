@@ -1,0 +1,401 @@
+[
+ {
+  "pedido": "preciso montar os slides do workshop de quinta",
+  "esperado": [
+   "brainiac-create-presentation"
+  ],
+  "jev": "brainiac-create-presentation",
+  "conf": 0.93,
+  "acerto": true,
+  "ms": 1016,
+  "usage": {
+   "input_tokens": 6190,
+   "output_tokens": 814
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "acabei a call com o Rivan, tenho a gravacao do Fathom aqui",
+  "esperado": [
+   "col-process-meeting"
+  ],
+  "jev": "col-process-meeting",
+  "conf": 0.96,
+  "acerto": true,
+  "ms": 884,
+  "usage": {
+   "input_tokens": 6199,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "amanha tenho reuniao com a Brinkanto, me ajuda a chegar preparado",
+  "esperado": [
+   "col-prepare-meeting"
+  ],
+  "jev": "col-prepare-meeting",
+  "conf": 0.66,
+  "acerto": true,
+  "ms": 902,
+  "usage": {
+   "input_tokens": 6198,
+   "output_tokens": 812
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "monta um orcamento pro pessoal da Ancora",
+  "esperado": [
+   "novarc-proposta"
+  ],
+  "jev": "novarc-proposta",
+  "conf": 0.99,
+  "acerto": true,
+  "ms": 900,
+  "usage": {
+   "input_tokens": 6192,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "quero fechar a sessao e jogar o que a gente decidiu no vault",
+  "esperado": [
+   "col-session-sync"
+  ],
+  "jev": "col-session-sync",
+  "conf": 0.71,
+  "acerto": true,
+  "ms": 893,
+  "usage": {
+   "input_tokens": 6196,
+   "output_tokens": 810
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "da um push do que mudou aqui no repositorio",
+  "esperado": [
+   "brainiac-sync"
+  ],
+  "jev": "brainiac-sync",
+  "conf": 0.97,
+  "acerto": true,
+  "ms": 927,
+  "usage": {
+   "input_tokens": 6192,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "bora planejar meu dia",
+  "esperado": [
+   "brainiac-daily-brief"
+  ],
+  "jev": "brainiac-daily-brief",
+  "conf": 0.95,
+  "acerto": true,
+  "ms": 865,
+  "usage": {
+   "input_tokens": 6187,
+   "output_tokens": 814
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "tive um encontro com o mentorado ontem, tenho o audio",
+  "esperado": [
+   "brainiac-process-mentoria"
+  ],
+  "jev": "brainiac-process-mentoria",
+  "conf": 0.99,
+  "acerto": true,
+  "ms": 906,
+  "usage": {
+   "input_tokens": 6195,
+   "output_tokens": 814
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "transforma aquele deck em PNG transparente",
+  "esperado": [
+   "brainiac-render-presentation"
+  ],
+  "jev": "brainiac-render-presentation",
+  "conf": 0.98,
+  "acerto": true,
+  "ms": 979,
+  "usage": {
+   "input_tokens": 6188,
+   "output_tokens": 814
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "preciso das cores e da tipografia da NOVARC pra uma landing",
+  "esperado": [
+   "novarc-design"
+  ],
+  "jev": "novarc-design",
+  "conf": 0.72,
+  "acerto": true,
+  "ms": 968,
+  "usage": {
+   "input_tokens": 6196,
+   "output_tokens": 810
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "rasga minha palestra antes de eu subir no palco",
+  "esperado": [
+   "brainiac-talk-review"
+  ],
+  "jev": "brainiac-talk-review",
+  "conf": 0.93,
+  "acerto": true,
+  "ms": 882,
+  "usage": {
+   "input_tokens": 6191,
+   "output_tokens": 812
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "quero gravar uma aula sobre marketplace, me ajuda com o roteiro",
+  "esperado": [
+   "brainiac-create-lesson"
+  ],
+  "jev": "brainiac-create-lesson",
+  "conf": 1.0,
+  "acerto": true,
+  "ms": 883,
+  "usage": {
+   "input_tokens": 6195,
+   "output_tokens": 814
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "tira o design system dessas imagens de referencia",
+  "esperado": [
+   "brainiac-extract-design-system"
+  ],
+  "jev": "brainiac-extract-design-system",
+  "conf": 0.98,
+  "acerto": true,
+  "ms": 935,
+  "usage": {
+   "input_tokens": 6190,
+   "output_tokens": 815
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "o vault ta desatualizado, roda uma varredura e me atualiza",
+  "esperado": [
+   "brainiac-context-maintenance"
+  ],
+  "jev": "brainiac-context-maintenance",
+  "conf": 0.98,
+  "acerto": true,
+  "ms": 906,
+  "usage": {
+   "input_tokens": 6200,
+   "output_tokens": 814
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "pergunta pro Hermes como ta a fila dele",
+  "esperado": [
+   "hermes-ask"
+  ],
+  "jev": "hermes-ask",
+  "conf": 0.92,
+  "acerto": true,
+  "ms": 916,
+  "usage": {
+   "input_tokens": 6191,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "checa se a VPS ta de pe",
+  "esperado": [
+   "hermes-vps"
+  ],
+  "jev": "hermes-vps",
+  "conf": 1.0,
+  "acerto": true,
+  "ms": 867,
+  "usage": {
+   "input_tokens": 6189,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "passa esse plano pro Codex rasgar antes de eu codar",
+  "esperado": [
+   "codex-review",
+   "grill-me-codex"
+  ],
+  "jev": "codex-review",
+  "conf": 0.62,
+  "acerto": true,
+  "ms": 925,
+  "usage": {
+   "input_tokens": 6195,
+   "output_tokens": 810
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "quero entender a arquitetura desse repositorio inteiro",
+  "esperado": [
+   "graphify"
+  ],
+  "jev": "graphify",
+  "conf": 0.97,
+  "acerto": true,
+  "ms": 883,
+  "usage": {
+   "input_tokens": 6191,
+   "output_tokens": 809
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "faz uma auditoria completa do codigo do admin",
+  "esperado": [
+   "code-ultragraph-review",
+   "code-ultragraph-jeview",
+   "code-review"
+  ],
+  "jev": "code-ultragraph-review",
+  "conf": 0.97,
+  "acerto": true,
+  "ms": 936,
+  "usage": {
+   "input_tokens": 6190,
+   "output_tokens": 812
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "me passa um prompt pra eu continuar isso em outra sessao",
+  "esperado": [
+   "session-handoff"
+  ],
+  "jev": "session-handoff",
+  "conf": 1.0,
+  "acerto": true,
+  "ms": 890,
+  "usage": {
+   "input_tokens": 6193,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "roda essa checagem de 10 em 10 minutos",
+  "esperado": [
+   "loop",
+   "schedule"
+  ],
+  "jev": "firecrawl-monitor",
+  "conf": 0.66,
+  "acerto": false,
+  "ms": 928,
+  "usage": {
+   "input_tokens": 6196,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "busca na web artigos sobre precificacao de software",
+  "esperado": [
+   "firecrawl",
+   "firecrawl-search",
+   "firecrawl-deep-research"
+  ],
+  "jev": "firecrawl-search",
+  "conf": 0.97,
+  "acerto": true,
+  "ms": 931,
+  "usage": {
+   "input_tokens": 6192,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "me monta um site de vendas pra NOVARC",
+  "esperado": [
+   "site-strategy-copy",
+   "site-page-architecture",
+   "scroll-craft",
+   "site-ship"
+  ],
+  "jev": "site-ship",
+  "conf": 0.6,
+  "acerto": true,
+  "ms": 975,
+  "usage": {
+   "input_tokens": 6190,
+   "output_tokens": 810
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "qual o CNPJ da NOVARC mesmo?",
+  "esperado": [
+   "__nenhuma__"
+  ],
+  "jev": "firecrawl-search",
+  "conf": 0.44,
+  "acerto": false,
+  "ms": 872,
+  "usage": {
+   "input_tokens": 6190,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "quanto e 17 vezes 23?",
+  "esperado": [
+   "__nenhuma__"
+  ],
+  "jev": "__nenhuma__",
+  "conf": 1.0,
+  "acerto": true,
+  "ms": 935,
+  "usage": {
+   "input_tokens": 6191,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ },
+ {
+  "pedido": "me explica o que e prompt caching",
+  "esperado": [
+   "__nenhuma__"
+  ],
+  "jev": "__nenhuma__",
+  "conf": 1.0,
+  "acerto": true,
+  "ms": 871,
+  "usage": {
+   "input_tokens": 6188,
+   "output_tokens": 811
+  },
+  "model": "jev-1.13.0"
+ }
+]
