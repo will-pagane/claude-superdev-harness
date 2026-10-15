@@ -2,7 +2,7 @@
 
 **Invariants recap** (full text in `../SKILL.md`): no PR, no delivery merge (the ONE exception is a peer-branch integration merge an orchestrator ordered by name), no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
 
-**If you are a fork, read `../references/fork-contract.md` first.** This file is the work; that file is who you are.
+**If you are a linked session, read `../references/session-contract.md` first; if you are a fork, `../references/fork-contract.md`.** This file is the work; that file is who you are.
 
 The plan is the unit of work. Whoever writes it — inline or in a fork — obeys this.
 
@@ -29,7 +29,8 @@ Hardened through the `codex-review` adversarial loop, invoked with **`rounds=unt
 **By whom, and how, depends on who owns the branch:**
 
 - **`N = 1`, this session builds:** run `superpowers:subagent-driven-development` to completion. The main session can spawn implementer subagents, so use them. This is not optional — a run that implemented inline instead had the user name the mechanism for it, and loaded SDD fifty minutes into the implementation phase.
-- **`N ≥ 2`, a fork builds:** **implement inline. SDD is not merely discouraged for a fork — it is unavailable, and no directive can enable it.** A fork's boilerplate carries `"Do NOT spawn subagents with the Agent tool"` as a hard, non-overridable rule, so SDD's fan-out cannot run there no matter what the directive says. The fork works the plan **directly, one task at a time, with verification per task and nothing marked done without reading real output** — SDD's discipline, minus its parallelism. Budget for it: this is the slowest part of an `N ≥ 2` run.
+- **`N ≥ 2`, a linked session builds:** implement **inline** when the brief says `sdd: off` (the default), with the discipline described for forks just below; run `superpowers:subagent-driven-development` when it says `sdd: on`. The session can spawn subagents; the mark decides whether it should.
+- **`N ≥ 2`, a fork builds (fallback):** **implement inline. SDD is not merely discouraged for a fork — it is unavailable, and no directive can enable it.** A fork's boilerplate carries `"Do NOT spawn subagents with the Agent tool"` as a hard, non-overridable rule, so SDD's fan-out cannot run there no matter what the directive says. The fork works the plan **directly, one task at a time, with verification per task and nothing marked done without reading real output** — SDD's discipline, minus its parallelism. Budget for it: this is the slowest part of an `N ≥ 2` run.
 
 **In both cases, override SDD's ending:** it finishes by calling `superpowers:finishing-a-development-branch`. Do **not** run it — it opens PRs and merges, which this skill forbids. Verification plus push replaces it.
 
@@ -86,4 +87,4 @@ Only `regression` stops the run. Without these lanes the rule reads as an absolu
 ## NEXT
 
 **N = 1** → `step-06-closeout.md`
-**A fork** → report `DONE <slug>` to the orchestrator and stop. Step 5 and step 6 are not yours.
+**A builder (linked session or fork)** → report `DONE <slug>` to the orchestrator and stop. Step 5 and step 6 are not yours.

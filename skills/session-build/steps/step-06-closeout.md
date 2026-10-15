@@ -8,7 +8,7 @@ Measured once: a close-out went out with every branch pushed and everything gree
 
 - **`PUSHED` is not a point of no return.** It is the moment the branch becomes good enough for someone to look at.
 - **Frame the report as the handoff to the only reviewer who sees the class of defect nothing automated sees.** A user who reads "done, all green" opens the app expecting confirmation; a user who reads "this is now worth your twenty minutes, and here is what I could not check" opens it hunting.
-- **Reopening after close-out is routine, not failure.** A fork that reports DONE is not closed until you have diffed its branch yourself; if the diff contradicts the report, reopen. That is the normal path, not an exception.
+- **Reopening after close-out is routine, not failure.** A builder that reports DONE is not closed until you have diffed its branch yourself; if the diff contradicts the report, reopen. That is the normal path, not an exception.
 
 ## 6.2 Measure the topology at the moment you write the instruction
 
@@ -34,7 +34,7 @@ Before releasing it, relocate or de-reference every gitignored artifact the repo
 
 State this explicitly in the report — it is not obvious from outside.
 
-**During the run: the orchestrator, always.** It is the only session holding the whole picture and the only one granting locks. A directive sent straight to a fork bypasses that: the orchestrator still believes the fork is holding and may grant the lock to someone else.
+**During the run: the orchestrator, always.** It is the only session holding the whole picture and the only one granting locks. A directive sent straight to a fork bypasses that: the orchestrator still believes the fork is holding and may grant the lock to someone else. Linked sessions are reachable, and the user may read them or ask them anything; but lock, merge and surface directives still come only from the orchestrator, for the same reason.
 
 **After the run: `/session-end`, once per branch, in merge order — and it needs a session whose *working directory* is the worktree.** This is mechanical: `session-end` reads `git branch --show-current` at its step 0 and must leave the worktree to remove it at step 9, so it assumes cwd, not `-C` flags.
 
@@ -42,11 +42,13 @@ State this explicitly in the report — it is not obvious from outside.
 
 **Two things about `/session-end` break in that mode and it must be told about them.** Its step 0 stops when the current branch is the default one — which is exactly the orchestrator's correct starting state, so read that as *"enter each worktree"*, not *"abort"*. And a session inside a worktree has **compound bash refused**: no `cd X && …`, no redirects, no `for`, no `;`-joined pairs, and no `-C` pointing at a different worktree. Every command becomes simple and one per call.
 
+**With linked sessions there is a third path, often the simplest: the builder session itself.** It is already standing in its worktree and holds its own close-out. The user invokes `/session-end` in each session, one at a time, in the merge order of the handoff; this skill never invokes it and never tells a session to. A session may only be archived **after** its `/session-end` finished: offer `mcp__ccd_session_mgmt__archive_session` then, never at this close-out, because archiving earlier removes the path just described.
+
 **A fresh session launched from the worktree remains a valid option**, not a requirement. Everything that step needs is in the ledger; each fork's `PARKED` and `CUT` entries exist precisely so a session that did not build the branch can still write honest pendings.
 
 ## 6.6 Hand off to `/session-end` with what it would otherwise re-derive
 
-Write `.superpowers/session-build/<RUN_ID>/handoff.md` and name it in the report: branch list with commit ranges, worktree absolute paths, merge order **with the reason each branch holds its position**, the deploy set, migrations applied and whether their branch has merged, live-fork status, the project profile from step-01, **the `PENDINGS-SOURCE` list from step-02 — every pendings entry this run's specs were built from, quoted by heading — and the `spec slug → agentId` map for every fork.**
+Write `.superpowers/session-build/<RUN_ID>/handoff.md` and name it in the report: branch list with commit ranges, worktree absolute paths, merge order **with the reason each branch holds its position**, the deploy set, migrations applied and whether their branch has merged, live-fork status, the project profile from step-01, **the `PENDINGS-SOURCE` list from step-02 — every pendings entry this run's specs were built from, quoted by heading — and, per spec, the builder kind and its address: the session's `local_...` id, or the fork's agentId.** For linked sessions also list the `claude/...` branch the app created for each one (no commits; remove it by hand after `/session-end` removed the worktree — nothing in this run deletes it) and the sessions to archive once their branch is closed.
 
 That last field is what `/session-end`'s fork lane addresses forks by, and it cannot be reconstructed. A real handoff recorded only *"Fork: alive, worktree untouched"* — true, and useless as an address, because names are not unique on this machine and only the agentId disambiguates. If a fork is dead, say so and give the id anyway: the lane spawns a fresh fork pointed at `fork-<slug>.md` on disk, and never assumes a fork remembers anything.
 

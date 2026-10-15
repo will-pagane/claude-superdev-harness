@@ -4,6 +4,8 @@
 
 The orchestrator writes no code, reviews no diffs line by line, and never implements a spec itself. Its whole job is traffic control.
 
+**Terminology.** Many rules below were written when every builder was a fork, and they say "fork". In any rule about locks, merges, manifests, liveness, relaying, `DONE` acceptance or escalation, **"fork" means any builder, linked session or fork.** A rule that binds forks only says so, or sits under a fork heading.
+
 **Idle capacity is the deliverable.** An orchestrator with nothing of its own to build has its whole attention free the moment a fork jams. That is what the rule buys.
 
 Four rules, each with its incident in `../references/orchestration-deadlocks.md#orchestrator-failures`:
@@ -15,16 +17,30 @@ Four rules, each with its incident in `../references/orchestration-deadlocks.md#
 
 ## 5.1 Dispatch
 
+### Linked sessions (the default)
+
+In the **same turn as the step-02 HALT answer**, and after step-03 initialized the ledger files and recorded your own id: one `mcp__ccd_session__start_session` per spec, **all in one message**, with `initiation: "user_asked"`, `context: "fresh"`, `use_worktree: true`, `name` = the spec slug cut to `[a-z0-9-]`, at most 24 characters, the § Session implementer brief from [dispatch-prompts.md](../dispatch-prompts.md) as `prompt`, and its fixed `background` sentence. Starting state `GO PLAN`, or `GO PLAN; HOLD-IMPL <reason>` for an unmet **total** dependency (it plans, codex-reviews, sends SURFACES, then waits; its phase-4 `GO` carries `MERGE <A-branch> BEFORE implementation`). An **ordered** dependency starts with `GO PLAN`.
+
+Then, still in the same turn: write `spec slug → session id` into `ledger.md` from each result, and send every session one message `PEERS <slug>=<local_id> ...` (a session opened first cannot know the ids issued after it).
+
+**Never end the turn between the HALT answer and the last `start_session`.** A later turn of yours is started by a builder's message, and the app refuses to open a session in it. A start that fails **validation** (a name too long, a bad field) is fixed and retried in the same turn. Only the refusal that cites the user's own words, or a session needed later (a replacement, a re-split), goes to a card: propose it with `initiation: "own_initiative"` and tell the user to start it; never work around the refusal.
+
+### Fork fallback
+
 Fork once per spec, all forks dispatched **in a single message** so they start concurrently, using the contract in [dispatch-prompts.md](../dispatch-prompts.md) § Fork implementer. Forks with an unmet **total** dependency launch in `HOLD`: they plan and codex-review, then stop and wait for a `GO`. Forks with an **ordered** dependency launch normally — their plan already orders the blocked tasks last.
 
-**A fork is one-shot: it reports once and its turn ends.** So the run is **two dispatches per fork, not one**:
+### Both builder kinds
 
-1. The initial `Agent` call carries phases 1–3. The fork plans, runs codex-review, sends its `SURFACES` manifest, and its turn ends.
-2. The orchestrator re-engages it with `SendMessage` for phases 4–5, once every manifest is in and its surfaces are ruled. That message *is* the `GO`, and it restates the locks.
+**A builder reports and ends its turn at each checkpoint, and your message starts its next turn.** For a fork that is its nature (one-shot); a linked session keeps running between turns but is told to stop at the same points. So the run is **two dispatches per builder, not one**:
 
-Every later directive — `GO`, `MERGE`, `HOLD` — is likewise a fresh `SendMessage` that revives the fork with context intact. Plan around message-driven revival, not around a fork sitting in a loop.
+1. The initial `start_session` (or `Agent`) call carries phases 1–3. The builder plans, runs codex-review, sends its `SURFACES` manifest, and its turn ends.
+2. The orchestrator re-engages it with `SendMessage` for phases 4–5 (§ Session re-engagement / § Fork re-engagement), once every manifest is in and its surfaces are ruled. That message *is* the `GO`, and it restates the locks. **A builder that re-sends `SURFACES` (a total dependency whose plan changed after its merge) voids its earlier `GO`**: re-intersect, re-rule, and send a new one.
 
-**The `agentId` from the spawn result is the address. Record it at spawn or lose it.** `description` is display text only — eight forks across two runs were dispatched with distinct slugs and every one listed as a bare handle. A fork told to `COORDINATE WITH <slug>` gets `No agent named '<slug>' is reachable`. So write `spec slug → agentId` into the ledger the moment each fork spawns, and **send that whole map to every fork in its dispatch prompt**; without it, `COORDINATE WITH` is fiction. Pass the slug as `description` anyway, for the run's display:
+Every later directive — `GO`, `MERGE`, `HOLD` — is likewise a fresh `SendMessage` that starts the builder's next turn with its context intact. Plan around message-driven turns, not around a builder sitting in a loop.
+
+### Fork addressing (fallback)
+
+**For forks, the `agentId` from the spawn result is the address. Record it at spawn or lose it.** (For sessions it is the `local_...` id in the `start_session` result, recorded the same way.) `description` is display text only — eight forks across two runs were dispatched with distinct slugs and every one listed as a bare handle. A fork told to `COORDINATE WITH <slug>` gets `No agent named '<slug>' is reachable`. So write `spec slug → agentId` into the ledger the moment each fork spawns, and **send that whole map to every fork in its dispatch prompt**; without it, `COORDINATE WITH` is fiction. Pass the slug as `description` anyway, for the run's display:
 
 ```
 description: "spec <spec-slug>"        # e.g. "spec inbound-close-time-clock"
@@ -35,7 +51,9 @@ Record per fork: **spec slug → name → `[ref]` → agentId**. Names are not u
 
 ## 5.2 Channel and vocabulary
 
-Forks report with `SendMessage to: "main"`. Every fork also appends its checkpoints to its own ledger file through `../scripts/ledger.py` — that file is the fallback channel if a message is lost, and the durable record after compaction.
+Linked sessions report with `SendMessage` to your session id (it is in their brief); forks with `SendMessage to: "main"`. Every builder also appends its checkpoints to its own ledger file through `../scripts/ledger.py` — that file is the fallback channel if a message is lost, and the durable record after compaction.
+
+**The app's automatic end-of-turn note is a wake-up signal, not a channel.** When a session's turn ends you get the first 400 characters of its last message (measured: a 1,300-character report arrived cut at 400). Read protocol lines from the session's `SendMessage` and from its ledger file, never from the note.
 
 **Fork → orchestrator checkpoints** (exact lines, one per event, at the start of the line — the sweep greps for them and `ledger.py` enforces the shape):
 
@@ -114,13 +132,17 @@ Run these on a cycle, not when you remember them:
 
 1. **Outstanding-lock sweep — every time you touch the ledger.** A fork waiting on a `GO` is silent *by design*, so the liveness rule below will never catch it. Read every `fork-<slug>.md` for a `LOCK` line with no matching grant, and grant or deny it. This is the one deadlock this design produces on its own: the request arrives, your context compacts, the request is forgotten, and the fork waits forever looking perfectly healthy. Sweep from the **main checkout's absolute path** — a sweep run against relative paths reads an empty directory and reports all clear. A re-sent `LOCK` is a symptom that you dropped one, not noise.
 2. **Liveness.** A fork silent across a whole phase gets pinged. Two pings unanswered → read its ledger and its worktree's `git log` directly, then escalate with what you found. Silence is never progress.
-3. **But measure the machine before calling anything dead.** A CPU-starved fork is *indistinguishable* from a hung one by that rule. `uptime` and a process count cost one command. Observed: load average 54–75 on a 10-core machine with 48 test processes alive, because a second fan-out was running concurrently. Nothing was broken; everything looked broken.
+3. **But measure the machine before calling anything dead.** Count live linked sessions and their subagents as well as forks. A CPU-starved fork is *indistinguishable* from a hung one by that rule. `uptime` and a process count cost one command. Observed: load average 54–75 on a 10-core machine with 48 test processes alive, because a second fan-out was running concurrently. Nothing was broken; everything looked broken.
 4. **Never accept `DONE` from the report alone — diff the branch against its base.** One fork reported two tasks built and pushed; the diff showed two files changed and the **four files that were the feature's entire entry point** simply absent. Its own verdict: not a deferral, an incomplete execution. This matters because **deferral and omission demand opposite responses**, and confusing them produces a close-out that lies in the hardest direction to catch. It deceives most precisely when the fork is all green — green it was, and none of that knows what was left out.
-5. **Releases.** On `PUSHED`: create any worktree waiting to branch from it, send `GO` to every fork holding on it, and log the release.
+5. **Releases.** On `PUSHED`: send `GO` to every builder holding on it — for a session in `HOLD-IMPL`, the phase-4 `GO` with `MERGE <branch> BEFORE implementation`; on the fork path, first create any worktree waiting to branch from it — and log the release.
 6. **Relay policy.** Relaying costs one revival per fork — with five forks, ten rulings broadcast would be fifty revivals. **Relay is mandatory when the ruling changes something the fork has already decided; optional when it only informs.** Log every relay in the ledger with the recipient's agentId. Its failure mode is invisible: nobody complains about a ruling they never received.
 7. **Push mechanics.** Under load a pre-push hook can run 40+ minutes and a client timeout is indistinguishable from a rejection — so **push in the background** and stop treating a hung push as a failed one. Confirm the ref with `git ls-remote`, never with the command's exit code: a correct exit code would still only say the command finished, not that the ref arrived.
 
-## 5.5 Fork death, and how to resume
+## 5.5 Builder death, and how to resume
+
+**Linked sessions.** A session that goes silent is not presumed dead and is not presumed revivable — neither was measured. In order: `mcp__ccd_session_mgmt__get_session <id>` for its state (`isRunning`, `isArchived`; the linked-sessions list says `working` or `idle`); then the disk — its worktree's `git status` and `git log`, its ledger file, the type gate; only then one `SendMessage`. If no new ledger line or reply follows within one phase, escalate (gate 3) with what you found. **No automatic fallback to a fork:** the user decides. If they choose to hand the spec to a fork, the session must first be archived or confirmed closed by the user (an idle session is not stopped — a message revives it), you log `RULING HANDOVER <slug> session <id> -> fork <agentId>`, and the fork works in the **same** worktree and branch with state read from disk. A failure caused by a permission denial is never handed to another executor: that would launder the denial.
+
+**Forks.**
 
 Forks die: account session limits, API errors, machine pressure. Observed across four runs — five forks killed twice by a session limit; three killed in the same minute costing about three hours; three killed on API errors leaving a run dead for **two calendar days**; and one subagent dying mid-refactor, leaving a half-applied rename and a non-compiling file found only by diffing git.
 
@@ -152,13 +174,15 @@ Cross-session messaging **does work** on this machine, including from inside a w
 ## Red flags — stop
 
 - About to grant two migration or deploy locks at once, or a second `verify` lock.
+- About to end the HALT-answer turn before every linked session is open.
+- About to hand a session's spec to a fork while the session could still write (not archived, not confirmed closed).
 - About to grant a `GO` without having swept the ledgers for an older ungranted `LOCK`.
 - About to grant a second deploy lock on an intersecting deploy set without the later fork merging first.
 - About to issue a `MERGE` between forks without having read `../references/orchestration-deadlocks.md`.
-- About to escalate a silent fork without having looked at the machine's load average.
-- About to redispatch after a fork death without running the type gate first.
+- About to escalate a silent builder without having looked at the machine's load average.
+- About to redispatch or message a builder after a death without running the type gate first.
 - About to accept `DONE` without diffing the branch against its base.
-- About to sweep for pending locks from a checkout where the fork ledger files do not exist.
+- About to sweep for pending locks from a checkout where the builder ledger files do not exist.
 - About to let a fork deploy an edge function another fork owns.
 - About to halt a fork mid-migration or mid-deploy to enforce a stop.
 - About to write code yourself.

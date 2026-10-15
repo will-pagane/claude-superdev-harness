@@ -4,6 +4,8 @@
 
 This is the orchestration design. Do it before any branch exists.
 
+**Terminology.** Many rules below were written when every builder was a fork, and they say "fork". In any rule about locks, merges, manifests, liveness, relaying, `DONE` acceptance or escalation, **"fork" means any builder, linked session or fork.** A rule that binds forks only says so, or sits under a fork heading.
+
 ## 2.1 Confirm the spec list
 
 In one message. If the user named files, use exactly those.
@@ -32,7 +34,7 @@ A dependency is temporal, not spatial. **Every tier keeps its own branch and its
 
 - **Independent** — no shared surface. Fully parallel. **Verify this transitively before believing it.** Two specs that name no file in common are still a single **deploy unit** if one modifies a bundled shared module and the other touches *any consumer of it — including deleting that consumer*. A bundled module is copied into every consumer at deploy time, so the deploy set is computed through the import graph, not from the file list either spec wrote. Misfiled as `Independent`, this pair deadlocks late. Treat it as `Ordered` at minimum, with the deploy ordering settled here rather than discovered later.
 - **Ordered** — B needs *something* of A's before it can finish: an interface decision, or code for some of B's tasks. Same answer either way, which is why this is one tier and not two: B branches from the default branch, **orders its plan so every dependency-free task runs first**, and puts the rest behind a single marked merge point. The orchestrator relays the interface decision when there is one, and sends `MERGE <A-branch> BEFORE <task>` when A reports `PUSHED`. B builds while A builds instead of idling.
-- **Total** — B imports A's code wholesale, or B's migration assumes A's schema, and almost nothing in B stands alone. **B's branch is created from A's branch**, after A reports `PUSHED` — so integration costs nothing. B still plans and codex-reviews in parallel, from the default branch, while it waits.
+- **Total** — B imports A's code wholesale, or B's migration assumes A's schema, and almost nothing in B stands alone. **B's branch is created from A's branch**, after A reports `PUSHED` — so integration costs nothing. B still plans and codex-reviews in parallel, from the default branch, while it waits. **With linked sessions this becomes merge-at-grant**, because B's session can only be opened at dispatch: B branches from the default branch, commits only plan and review files, and merges A's branch when its phase-4 `GO` arrives, before any implementation commit, then re-checks its premises (session contract).
 - **Entangled** — the two would have to edit the same code at the same time to make sense of each other. That is not a dependency, it is a decomposition error: **fold them back into one spec** with one fork, which implements them serially. Two agents in one working directory is never the answer.
 
 **Decompose by where the diff lands, not by theme — this is what decides whether `N` scales.** Cut along **file and deploy surface** and the manifests come out nearly disjoint by construction, so the intersection is `N` cheap membership checks; cut along topics and it is genuinely `N²` arbitration. **Splitting what lands in the same place buys a merge order, not parallelism.**
@@ -81,11 +83,27 @@ If the project ships one (`npm run collide` or equivalent), run it now, through 
 
 **Check that the artefacts you are about to promise are committable at all.** One run promised to collect every codex-review run directory onto the default branch and had to revoke it in front of five forks, because that directory was listed in `.git/info/exclude` and collecting it would have needed a forced add the project forbids. This skill treats plans and review transcripts as committable by default; confirm that against the repo's ignore and exclude rules **before** promising, not after.
 
-## 2.6 Present and confirm — HALT
+## 2.6 Decisions file and SDD marks (N ≥ 2)
 
-Present the spec list, the dependency graph with the acyclicity statement, the lock plan, and the project profile.
+A linked session inherits nothing from this conversation. Whatever the brainstorm decided and the specs do not state reaches it only through this file, so write it before the HALT: `<ledger dir>/DECISIONS.md`, through `Write`, with three parts:
+
+1. **Per spec, every decision or preference from the conversation that the spec does not state explicitly.** Final values only; where the conversation reversed itself, write the final value and name the dead one (*"37 days, not 30"*), so nobody resurrects it. Read the specs while writing it: a decision a spec already states does not belong here.
+2. **The rulings of §2.2-§2.4:** dependency classes, merge points and order, shared files and who changes what, the lock plan.
+3. **The branch name step-03 will use for each spec.** Builders create exactly that name; they never invent one.
+
+Observed in the 2026-10-15 benchmark: a fresh builder given this file matched an inheriting fork on every hidden test; the one without it lost exactly the fact that could not be guessed from the spec and the code. The file also costs the fork path nothing, so write it whichever builder kind the run will use.
+
+**Mark each spec `sdd: on` or `sdd: off`.** The default is off: in the same benchmark SDD cost about four times as much and three times as long with no quality gain. Mark it on only when the spec touches money, fiscal documents, authentication or authorization, RLS, or a destructive migration, or the user asks. The marks exist only for `N ≥ 2` linked sessions; **`N = 1` keeps SDD mandatory** (step-04), and a fork cannot run it at all.
+
+For `N = 1` the file is optional: the builder is this session.
+
+## 2.7 Present and confirm — HALT
+
+Present the spec list, the dependency graph with the acyclicity statement, the lock plan, the project profile, and for `N ≥ 2` the `DECISIONS.md` path, the SDD marks, and the builder kind: *"abrirei N sessões ligadas, uma por spec"* (or the fork fallback, with the reason).
 
 > **HALT.** Options: [A] proceed as presented — [B] change the scope or order, then re-present — [C] fold two specs together and re-derive. Resume only on the user naming one. Do not proceed on silence.
+
+**For linked sessions, the answer [A] is also the app's authorization to open them, and it is only good for the turn it arrives in.** The app opens a session only in a turn carrying the user's own words; a turn started by another session's message is refused. So after [A], run step-03 and step-05 §5.1 to the last `start_session` call **without ending the turn**. Every session the run will need opens now, including the ones that will wait on a dependency.
 
 This run has **five** possible human gates, and this is the last one guaranteed to fire. Say which ones remain rather than promising a duration: *"everything between here and the close-out happens without asking, unless an escalation fires."* Do not promise "one continuous pass" — that is a duration claim, and runs break it.
 
@@ -94,6 +112,7 @@ This run has **five** possible human gates, and this is the last one guaranteed 
 - About to confirm a dependency graph without having checked it for a cycle.
 - About to classify a pair `Independent` on file lists alone, without asking whether the import graph joins them.
 - About to open a branch before this step's HALT has been answered.
+- About to present the HALT for N ≥ 2 without `DECISIONS.md` written and the SDD marks stated.
 - About to promise a number of reviewable branches as a commitment rather than a forecast.
 
 ## NEXT

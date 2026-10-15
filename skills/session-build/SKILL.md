@@ -1,6 +1,6 @@
 ---
 name: session-build
-description: Use when the user wants an idea taken from conversation to implemented, pushed branches in one pass — "/session-build <ideia>", "builda isso", "brainstorma e implementa", "aprimore ao máximo", "faça as melhorias", "vamos mapear e escrever estas specs", "pega essa ideia e leva até a branch pronta". ALSO invoke mid-conversation without being asked: if this conversation has already produced a spec, a plan, or a code edit toward a multi-part build, stop and invoke this skill before continuing — you are already doing session-build work and the isolation it owns has not happened. Brainstorm produces one or more specs; one runs inline, several fork this session into one child session per spec with this session orchestrating. Stops at pushed branches — never opens a PR, never merges into the default branch (that is /session-end). NOT for a spec-less one-line change, NOT for closing a branch that is already built, NOT for edits the user is directing and reviewing turn by turn.
+description: Use when the user wants an idea taken from conversation to implemented, pushed branches in one pass — "/session-build <ideia>", "builda isso", "brainstorma e implementa", "aprimore ao máximo", "faça as melhorias", "vamos mapear e escrever estas specs", "pega essa ideia e leva até a branch pronta". ALSO invoke mid-conversation without being asked: if this conversation has already produced a spec, a plan, or a code edit toward a multi-part build, stop and invoke this skill before continuing — you are already doing session-build work and the isolation it owns has not happened. Brainstorm produces one or more specs; one runs inline, several open one linked session per spec (forks of this session as the fallback) with this session orchestrating. Stops at pushed branches — never opens a PR, never merges into the default branch (that is /session-end). NOT for a spec-less one-line change, NOT for closing a branch that is already built, NOT for edits the user is directing and reviewing turn by turn.
 ---
 
 # Session Build
@@ -23,6 +23,7 @@ Pull request and **delivery** merge are **not part of this skill at all** — `/
 | `/session-build`, specs already written this session | `steps/step-02-scope-and-collisions.md` — confirm which specs are in scope, skip the brainstorm |
 | `/session-build`, no prompt and no specs | Ask for the idea in one message, then step-01 |
 | **The prompt carries an already-written spec or plan** | step-02. Do not invent a ruling about whether the brainstorm still applies — say in one line that you are entering at scope confirmation because the spec already exists, and **re-validate its premises against the live tree** (step-01 owns that check; run it even though you skip the rest of step-01). A plan written in an earlier session was hardened against the code as it was then. |
+| **You were launched as a linked session by an orchestrator** (your first message is a session-build brief from another session) | Read `references/session-contract.md`, then `steps/step-04-build.md`. Nothing else. Steps 1, 2, 5 and 6 belong to the orchestrator. |
 | **You were launched as a fork by an orchestrator** | Read `references/fork-contract.md`, then `steps/step-04-build.md`. Nothing else. Steps 1, 2, 5 and 6 belong to the orchestrator; reading them spends your context on work you are forbidden to do. |
 | **Mid-conversation drift** — this conversation already produced a spec, a plan, or a code edit toward a multi-part build, and this skill was never invoked | Stop. Say so in one line. Then step-01, treating everything already produced as input to be re-validated rather than progress to be preserved. The work so far happened in the shared checkout with no isolation; step-03 is what fixes that. |
 | **Conversational invocation** — the user explained the idea over several turns and then asked for a build in their own words ("builda isso", "faça as melhorias", "roda o session build") rather than typing the slash command | **step-01, at full strength.** This is the entry point that gets degraded, and the degradation is always the same: the conversation already feels like a brainstorm, so `superpowers:brainstorming` is skipped, and from there the rest of the chain falls with it. **A conversation is not a brainstorm.** It has produced no spec file, cleared no design gate, and had no premise checked against the live tree. Announce the chain (below) and run every link. |
@@ -36,7 +37,7 @@ This skill is a **router over four other skills**. Its own text is the connectiv
 | `superpowers:brainstorming` | step-01 — **mandatory** for every idea-shaped entry: the slash command with a prompt, the no-prompt ask, conversational invocation, and mid-conversation drift | **No.** Its output is a committed spec file and a design the user approved at its gate. Turns of discussion produce neither. **Exempt, and only these:** the two entry points that begin at step-02 because a written spec already exists — and the exemption is conditional on re-validating that spec's premises against the live tree (step-01 §1.2), which is not optional. Nothing else exempts it. |
 | `superpowers:writing-plans` | step-04, every plan | **No.** The plan is a file at a known path that implementation reads. |
 | `codex-review` (`rounds=until-approved`) | step-04, every plan, before any code | **No.** A second model reading the plan is the point; your own confidence is not a substitute, and neither is the user having agreed. |
-| `superpowers:subagent-driven-development` | step-04, **`N = 1` inline builds only** | **No** — and it is **unavailable to a fork**, which implements inline instead. See below. |
+| `superpowers:subagent-driven-development` | step-04: **mandatory for `N = 1` inline builds**; for `N ≥ 2`, only in a linked session whose brief says `sdd: on` (step-02 marks risky specs; the default is off) | **No** — and it is **unavailable to a fork**, which implements inline instead. See below. |
 
 **Announce each link as you enter it, and write its ledger line when it completes.** Those lines are the evidence the link ran — a run that reaches implementation without them skipped something, whatever the transcript says.
 
@@ -63,11 +64,11 @@ A compressed recap of this block sits at the top of every step file. If a step f
 
 ### 1. Authorization
 
-The invocation authorizes, **for the specs it produces only**: brainstorming, writing spec files, branch/worktree creation, forking this session, commits, applying migrations, deploying edge functions, and pushing branches.
+The invocation authorizes, **for the specs it produces only**: brainstorming, writing spec files, branch/worktree creation, opening one linked session per spec (or forking this session, on the fallback path), commits, applying migrations, deploying edge functions, and pushing branches. Opening sessions also needs the user's own words in the turn that opens them (an app rule, not this skill's): the step-02 HALT answer is that turn.
 
 **Never authorized under this skill:** `gh pr create`, **any delivery merge** — into the default branch or any shared integration branch — any force-push, any deletion of a branch or worktree, and any work outside the specs in scope. If the user asks for a PR mid-run, answer that `/session-end` is the skill for it and keep going.
 
-**One merge is authorized, and only one: a peer-branch integration merge that the orchestrator has explicitly ordered with a `MERGE <branch> BEFORE <action>` directive.** That is how an `Ordered` dependency takes its predecessor's code and how an intersecting deploy set is resolved — the workflow does not function without it. It is bounded on all sides: only a fork performs it, only into its own feature branch, only on a directive naming the source branch, never toward the default branch, and never on the fork's own initiative. A fork that believes it needs a merge nobody ordered reports `BLOCKED` instead.
+**One merge is authorized, and only one: a peer-branch integration merge that the orchestrator has explicitly ordered with a `MERGE <branch> BEFORE <action>` directive.** That is how an `Ordered` dependency takes its predecessor's code and how an intersecting deploy set is resolved — the workflow does not function without it. It is bounded on all sides: only a builder (linked session or fork) performs it, only into its own feature branch, only on a directive naming the source branch, never toward the default branch, and never on the builder's own initiative. A builder that believes it needs a merge nobody ordered reports `BLOCKED` instead.
 
 **Also never authorized — tree-mutating recovery.** `git stash` with a merge or rebase in progress, `git reset --hard`, `git rm --cached -r .`, and `git checkout -- <path>` over uncommitted work destroy state you did not create and cannot restore. They are bypass-class actions: escalate instead. Observed: a `git stash push -u` issued with `MERGE_HEAD` live and six hand-resolved files staged, described afterwards by the session that did it as unnecessary risk.
 
@@ -75,7 +76,7 @@ The invocation authorizes, **for the specs it produces only**: brainstorming, wr
 
 1. **Brainstorm gates** — the ones `superpowers:brainstorming` owns (design approval, spec review).
 2. **Step 2** — confirm the spec list, the execution order and the dependency rulings.
-3. **Escalations** — plan contradiction, BLOCKED task, a red verification you have triaged as `regression`, unresolvable collision, a silent fork, correlated fork death.
+3. **Escalations** — plan contradiction, BLOCKED task, a red verification you have triaged as `regression`, unresolvable collision, a silent builder, correlated builder death.
 4. **A mid-run user instruction that contradicts project law** — name the conflict and let the user rule; do not silently pick either side.
 5. **A runbook step that is genuinely manual** and blocks an action this run needs — but only after you have proved it is manual (step-06 says how).
 
@@ -111,14 +112,19 @@ One step file at a time, read to completion, then its named successor. Never loa
 
 | | N = 1 | N ≥ 2 |
 |---|---|---|
-| Who builds | this session, inline | one **fork of this session** per spec |
+| Who builds | this session, inline | one **linked session** per spec (`start_session`, fresh, own worktree); forks of this session on the fallback path |
 | This session's role | builder | **orchestrator only — writes no code** |
 | Branches / worktrees | one | **one per spec** |
-| Plan + codex-review | inline | inside each fork, concurrent |
-| Implementation | inline, via SDD | inline **inside each fork** (a fork cannot spawn subagents), concurrent across specs, serial within one |
+| What the builder knows | everything | its brief, its spec and **`DECISIONS.md`** (step-02 writes it); a fork also inherits this conversation |
+| Plan + codex-review | inline | inside each builder, concurrent |
+| Implementation | inline, via SDD | inline **inside each builder**, concurrent across specs, serial within one; SDD only in a session marked `sdd: on` (a fork cannot spawn subagents) |
 | Terminal state | 1 pushed branch | N pushed branches — **a result, not a promise** (they can collapse; see step-06) |
 
-A fork inherits this session's full conversation context — the whole brainstorm, every spec, every ruling. That is the point: forks already know why their spec exists and what the neighbours are doing. The fork prompt gives **directives**, not a context dump.
+**Why linked sessions and not forks.** A fork of this session cannot spawn subagents, cannot enter a worktree (its isolation is a `cd` discipline and nothing pins its writes), and dies with the session that spawned it. A linked session opened by the app has its own worktree, runs any skill including SDD, survives the orchestrator, and the user can talk to it directly. It also costs less on real runs: a fresh session starts at the harness baseline, while anything that inherits this conversation re-reads all of it on every turn (measured 2026-10-15: a context-inheriting session started at 389k tokens). What the fork got for free, the brainstorm, the session gets from `DECISIONS.md`; in the 2026-10-15 benchmark that file closed the whole quality gap, and without it the fresh builder lost the one fact that could not be guessed.
+
+**Fallback.** When `mcp__ccd_session__start_session` is not in the tool list (the CLI, the cloud, another host), or `get_session "self"` fails before dispatch, use forks exactly as before: `references/fork-contract.md`, `dispatch-prompts.md` § Fork implementer, and the fork paragraphs of step-03 and step-05. A fork inherits this session's full conversation, so its prompt gives **directives**, not a context dump. Choose the path once, before dispatch; never mix builder kinds in one run unless the user hands a stuck spec over (step-05 §5.5).
+
+**Terminology.** Many rules in the step files were written when every builder was a fork, and they say "fork". In any rule about locks, merges, manifests, liveness, relaying, `DONE` acceptance or escalation, **"fork" means any builder, linked session or fork.** A rule that binds forks only says so, or sits under a fork heading.
 
 **Every tier keeps its own branch and its own worktree — two sessions never share a working directory.**
 
@@ -128,10 +134,11 @@ This skill runs inside real projects that carry their own rules. Read the projec
 
 ## Ledger
 
-`.superpowers/session-build/<RUN_ID>/`, where `<RUN_ID>` is `<YYYYMMDD-HHMM>` set at step-02. Pass it to every fork **as an absolute path into the main checkout**.
+`.superpowers/session-build/<RUN_ID>/`, where `<RUN_ID>` is `<YYYYMMDD-HHMM>` set at step-02. Pass it to every builder **as an absolute path into the main checkout**.
 
-- `ledger.md` — orchestrator-owned: spec list, dependency graph, collision rulings, fork names and agentIds, every lock grant and release, every escalation.
-- `fork-<spec-slug>.md` — one per fork, fork-owned.
+- `ledger.md` — orchestrator-owned: spec list, dependency graph, collision rulings, the orchestrator's own session id, builder addresses (session `local_...` ids, or fork agentIds), every lock grant and release, every escalation.
+- `DECISIONS.md` — written at step-02 when N ≥ 2: the brainstorm decisions the specs do not state, the collision rulings and the branch names. Builders read it by absolute path.
+- `fork-<spec-slug>.md` — one per builder, builder-owned. The name is historical and kept for both kinds because the lock sweep globs it; for sessions the orchestrator creates it with `ledger.py init --fork` before dispatch.
 
 Write through `scripts/ledger.py`: it owns the line format the lock sweep greps for, takes an absolute path, appends only, and never rewrites history. Write every checkpoint the moment it happens; **commit** the ledger at three milestones only (step-02 close, manifest intersection, close-out). Context does not survive compaction; the file does.
 
@@ -146,7 +153,9 @@ Read fully and follow **`steps/step-01-preflight-and-brainstorm.md`**.
 - About to run `git stash`, `git reset --hard` or `git rm --cached` against state you did not create.
 - About to `git commit` code on `main`/`master`.
 - About to put two sessions in one worktree, for any reason.
-- About to start implementation with two forks on the same branch, or with the orchestrator writing code.
+- About to start implementation with two builders on the same branch, or with the orchestrator writing code.
+- About to open a linked session in a turn the user did not write (the app refuses it): propose it with `initiation: "own_initiative"` and tell the user instead.
+- About to read a protocol line from the 400-character end-of-turn note a session leaves, instead of from its message or its ledger file.
 - About to trust a gate result you obtained through a pipe, or one you measured before doing something else.
 - About to report a branch as done without having read the verification output yourself.
 - About to ask the user a question that is not one of the five gates above.

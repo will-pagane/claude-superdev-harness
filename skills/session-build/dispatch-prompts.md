@@ -1,8 +1,13 @@
 # Dispatch prompts — session-build
 
-Used only when `N ≥ 2` specs. Dispatch every fork **in a single message** so they start concurrently.
+Used only when `N ≥ 2` specs. Two builder kinds, two sets of sections:
 
-A fork inherits the orchestrator's **full conversation context** — the brainstorm, every spec, every ruling made before the fork existed. So the prompt below is a list of **directives and boundaries**, not a context dump. What it must still state explicitly is everything decided *after* the fork could have inherited it: its own slug, its own worktree, its dependencies, and its surface rulings.
+- **Linked sessions (the default when `mcp__ccd_session__start_session` is available):** § Session implementer, § Session re-engagement. Open every session **in a single message**, in the same turn as the step-02 HALT answer.
+- **Forks (the fallback: CLI, cloud, or no `start_session`):** § Naming, § Fork implementer, § Fork re-engagement. Dispatch every fork **in a single message**.
+
+§ Peer coordination, § Orchestrator check-ins, § What the orchestrator owes and § Launch payload apply to both.
+
+The rest of this introduction is about forks. A fork inherits the orchestrator's **full conversation context** — the brainstorm, every spec, every ruling made before the fork existed. So the prompt below is a list of **directives and boundaries**, not a context dump. What it must still state explicitly is everything decided *after* the fork could have inherited it: its own slug, its own worktree, its dependencies, and its surface rulings.
 
 Anything decided *after* dispatch travels over `SendMessage`, never by assumption.
 
@@ -278,14 +283,154 @@ Keep it short. The fork revives with its whole transcript — restate only what 
 
 ---
 
+## § Session implementer
+
+One per spec, sent as the `prompt` of `mcp__ccd_session__start_session` with `initiation: "user_asked"`,
+`context: "fresh"`, `use_worktree: true`, `name` = the spec slug cut to the tool's limit (`[a-z0-9-]`, at most 24 characters; keep it unique in the run), and `background` set to the fixed sentence
+"A session-build orchestrator opened this session to build one spec; the brief is self-contained.". Fill every
+`<...>` before sending. Unlike a fork, the session inherits **nothing**: this brief, the spec and DECISIONS.md are
+all it knows, so nothing may be left to inference.
+
+```
+=== LAUNCH PAYLOAD (every field required; a missing one is `BLOCKED <field> missing from dispatch`) ===
+spec slug:            <spec-slug>
+skill dir:            <ABSOLUTE path of the session-build skill: where references/ and scripts/ live>
+spec file:            <ABSOLUTE path in the main checkout>
+decisions file:       <ABSOLUTE path>/.superpowers/session-build/<RUN_ID>/DECISIONS.md
+branch:               <type>/<spec-slug>-<YYYYMMDD>     <- you create it; the app's claude/... branch is not it
+default branch:       <default-branch>
+ledger dir:           <ABSOLUTE path in the MAIN checkout>; your file fork-<spec-slug>.md already exists
+orchestrator id:      <local_... of the orchestrator session>
+peer map:             PENDING                           <- arrives as one PEERS message right after dispatch
+project profile:      merge_path=<pr|local-merge>  repo_shape=<app|docs-only|infra-no-suite|library>
+                      gate_order=<exact commands, in the order the hooks run them>
+                      deploy_wrapper=<script|none>  migration_tool=<cli|ci-applies-on-merge>
+                      bootstrap=<install command; env files to copy from the main checkout; link step>
+dependency:           <independent | ordered on <slug> at <merge point> | total on <slug>>
+initial lock rulings: none yet
+starting state:       GO PLAN                           <- or `GO PLAN; HOLD-IMPL <reason>` for an unmet total dependency
+sdd:                  <off | on>
+=== END LAUNCH PAYLOAD ===
+You are a linked session that owns exactly one spec, start to finish. You inherited NO context
+from the session that opened you. Read, in this order: <skill dir>/references/session-contract.md,
+<skill dir>/steps/step-04-build.md, your spec file, then the decisions file. What follows is binding.
+
+IDENTITY
+  Spec slug:  <spec-slug>     Branch: <branch>     Dependency: <as in the payload>
+  You are ONE of <N> builders running now. You own your spec and nothing else.
+  Sign every message with your slug.
+
+CHANNEL
+  Report with SendMessage to <orchestrator id>. Its directives arrive as <cross-session-message>.
+  Also append every checkpoint to your ledger file through <skill dir>/scripts/ledger.py (--dir <ledger dir>
+  --fork <spec-slug>), VERBATIM, one per line, at the START of the line: READY / PLAN / CODEX /
+  SURFACES / TASK / LOCK / RELEASE / APPLIED / DEPLOYED / PUSHED / BLOCKED / WAITING / PARKED /
+  DONE, plus NOTE for anything else. Prose goes under the line, never in place of it; the
+  orchestrator greps this file. Write it on every checkpoint; never commit it (the orchestrator does).
+  The automatic 400-character note your turn-end produces is not a channel.
+
+FREEZE: exactly as session-contract.md says (fork-contract § "If you are frozen").
+
+FIRST ACTION
+  The session contract's: `git switch --no-track -c <branch> origin/<default branch>` inside your worktree,
+  the step-03 §3.1 bootstrap (<bootstrap commands>), the READY line through ledger.py with your
+  worktree path and resolved hooksPath, then READY <spec-slug> to the orchestrator.
+
+PHASE 1 — PLAN
+  Invoke `superpowers:writing-plans` and follow it exactly. Write to
+  docs/superpowers/plans/<YYYY-MM-DD>-<spec-slug>.md, never a repo-root PLAN.md. The plan MUST carry
+  every migration (applied file-first via the migration CLI, confirmed against the remote ledger)
+  and every function deploy (through the wrapper, verified by re-downloading and grepping) as
+  explicit tasks with their own verification. ON AN ORDERED DEPENDENCY: every task that does not need
+  the dependency first, the rest after one marked merge point. Do NOT run writing-plans' "Execution
+  Handoff" and do not ask the user anything. Run its Self-Review, then send PLAN <path> TASKS <n>.
+
+PHASE 2 — CODEX REVIEW
+  Invoke `codex-review` with slug=<spec-slug> and rounds=until-approved, seeded with your plan.
+  Uncapped; never stop to ask. A stall is CODEX STALL ROUND <n> <objection>, sent as information.
+  Copy the converged $PLAN_FILE back over your plan path, then emit the approval with
+  <skill dir>/scripts/ledger.py codex --dir <ledger dir> --fork <spec-slug> --rundir <dir> --plan <path> --rounds <n>
+  (never hand-written) and send the same line.
+
+PHASE 3 — SURFACE MANIFEST, THEN END YOUR TURN
+  From the hardened plan send SURFACES <spec-slug> with migrations (and tables), functions, shared
+  modules and other files. Then STOP. The orchestrator intersects every manifest and starts your
+  next turn with GO <spec-slug> phase 4.
+
+PHASE 4 — IMPLEMENT (arrives as a message)
+  sdd: off -> work the plan INLINE, task by task, each task's verification run before it is done.
+  sdd: on  -> run `superpowers:subagent-driven-development` on the plan.
+  Either way: never `finishing-a-development-branch` (it opens PRs and merges); Phase 5 replaces it.
+  TASK lines only at plan-phase boundaries. BLOCKED the moment you cannot resolve something.
+  LOCKS: before a migration or deploy task send LOCK <kind> <ids>, WAIT (end your turn with
+  WAITING <on what>) for GO <spec-slug> <kind> <ids>, act, send APPLIED / DEPLOYED ... VERIFIED <how>.
+  No GO after about ten of your own tool calls: re-send the same LOCK. Never act unlocked.
+  Never touch a function another builder owns without a MERGE or REASSIGN directive.
+
+PHASE 5 — VERIFY AND PUSH
+  First send LOCK verify <branch> and wait (end your turn with WAITING) for GO <spec-slug> verify <branch>:
+  the suite and the push are serialized across builders. Then run the full lint, typecheck, build and
+  test suite yourself through <skill dir>/scripts/gate.sh and read the output. Red: fix and re-run; unfixable:
+  RELEASE verify <branch> first, then BLOCKED. Every exit from this phase releases the verify lock. Then `git push -u origin <branch>` (never
+  force, never --no-verify), confirm with `git ls-remote`, and send PUSHED <branch> <first7>..<last7>
+  and RELEASE verify <branch>, then DONE <spec-slug>. Then stop and stay available: the user may later run /session-end in you.
+  Leave the worktree and branch as they are.
+
+FORBIDDEN, ABSOLUTELY
+  gh pr create · any merge except a MERGE the orchestrator ordered by name · finishing-a-development-branch ·
+  force-push · --no-verify · --squash · committing on the default branch · deleting any branch or
+  worktree · opening other sessions · editing another builder's spec, plan or surfaces · asking the
+  user anything (route it through the orchestrator).
+
+DIRECTIVES YOU MAY RECEIVE
+  PEERS <slug>=<id> ...                 the peer map; append NOTE PEERS <n> RECEIVED
+  GO <spec-slug> phase 4                implement (may carry MERGE <branch> BEFORE implementation)
+  GO <spec-slug> <kind> <ids>           lock granted
+  HOLD <reason>                         stop at the next phase boundary and wait
+  COORDINATE WITH <slug> ON <surface>   see § Peer coordination
+  MERGE <branch> BEFORE <action>        take the peer's branch into yours first
+  REASSIGN <surface> TO <slug>          drop that surface from your plan
+
+FINAL REPLY: the same lines as § Fork implementer's FINAL REPLY (SPEC, BRANCH, RANGE, PLAN, CODEX,
+MIGRATIONS, DEPLOYS, VERIFY, PARKED, CUT), with PARKED written as draft pendings entries.
+```
+
+---
+
+## § Session re-engagement
+
+Sent by `SendMessage` to the session id once every manifest is in and the session's surfaces are ruled. It starts the
+session's next turn and **is** the `GO` for phases 4–5.
+
+```
+<orchestrator> → <spec-slug>
+
+GO <spec-slug> phase 4
+<for an unmet total dependency that is now PUSHED:>  MERGE <A-branch> BEFORE implementation
+  (merge, re-check your premises, and if the plan changes: re-review, re-send SURFACES and stop)
+
+PEERS <slug>=<id> ...                   (restated)
+SURFACE RULINGS that apply to you:
+  <one line each: owned / reassigned / ordered behind a peer / merge point>
+LOCKS still bind: <state the ordering, who applies before whom, what you are held behind>
+sdd: <off|on>, as in your brief.
+
+Then PHASE 5: LOCK verify <branch> -> wait for GO -> full suite through gate.sh -> push -> PUSHED,
+RELEASE verify, DONE. On any exit from phase 5, BLOCKED included, RELEASE verify first.
+```
+
+Keep it short: the session still has its whole transcript. Restate only what changed since it stopped.
+
+---
+
 ## § Peer coordination
 
 When the orchestrator sends `COORDINATE WITH <name> ON <surface>`:
 
-1. Try `ListAgents` and `SendMessage` to that name directly (append its ` [ref]` only if the listing shows a duplicate).
-2. If the peer is not addressable from your session, **relay through `main`** — send the orchestrator what you want the peer to know and let it forward. Never assume the peer heard you.
+1. A linked session sends to the peer's `local_...` id from its peer map and reads the delivery result. A fork tries `ListAgents` and `SendMessage` to that name directly (append its ` [ref]` only if the listing shows a duplicate).
+2. If the peer is not addressable, or the result does not say `delivered`, **relay through the orchestrator** (`main` for a fork, the orchestrator id for a session) — send the orchestrator what you want the peer to know and let it forward. Never assume the peer heard you.
 3. Agree on exactly two things: **who owns the surface**, and **what the merge point is** (which branch takes the other's work, and when).
-4. Report the agreement to `main` in one line: `AGREED <surface> OWNER <slug> MERGE <branch> AFTER <event>`. An agreement the orchestrator did not record does not exist.
+4. Report the agreement to the orchestrator in one line: `AGREED <surface> OWNER <slug> MERGE <branch> AFTER <event>`. An agreement the orchestrator did not record does not exist.
 
 ---
 
@@ -311,13 +456,13 @@ Two unanswered pings → stop pinging. Read `fork-<slug>.md` and that worktree's
 - **Phase 1:** every promised plan file exists and is non-trivial.
 - **Phase 2:** the fork's `CODEX APPROVED … SHA …` line exists and was written by `scripts/ledger.py codex`, which refuses unless `<rundir>/PLAN.md` matches the canonical plan byte for byte. That match **is** the copy-back proof, so there is nothing left to confirm by eye — but a fork that reports approval with **no** such line has either skipped the review or skipped the copy-back, and implements the un-hardened plan. No line, no GO.
 - **Phase 3:** all `N` manifests intersected before the first GO. A GO granted before the last manifest arrived is a collision you chose not to see.
-- **Between 3 and 4:** every fork re-engaged by `SendMessage` (§ Fork re-engagement). A fork that stopped at its manifest is *finished*, not waiting — nobody revives it but you, and a fork you forgot to re-engage looks exactly like a fork that is quietly working.
+- **Between 3 and 4:** every builder re-engaged by `SendMessage` (§ Session re-engagement or § Fork re-engagement). A fork that stopped at its manifest is *finished*, not waiting — nobody revives it but you, and a fork you forgot to re-engage looks exactly like a fork that is quietly working.
 - **Phase 4:** exactly one migration lock and one deploy lock outstanding at any moment.
 - **Phase 5:** every branch pushed, every `PARKED` and `CUT` line collected into the ledger — they are the close-out report, and they are invisible to a compacted context.
 
 ## § Launch payload — required fields (added by the 2026-08-26 restructure)
 
-A fork reads only `references/fork-contract.md` and `steps/step-04-build.md`. Everything else it needs must be in the dispatch prompt, and its contract tells it to report `BLOCKED <field> missing from dispatch` rather than reconstruct a missing field. Every initial dispatch carries:
+A builder reads only its contract (`references/session-contract.md` or `references/fork-contract.md`) and `steps/step-04-build.md`. Everything else it needs must be in the dispatch prompt, and its contract tells it to report `BLOCKED <field> missing from dispatch` rather than reconstruct a missing field. § Session implementer's payload is the session's list (it adds the decisions file, the orchestrator id, the default branch and `sdd`, and its peer map arrives right after dispatch). Every fork dispatch carries:
 
 - spec slug, spec file path, branch name, **worktree absolute path**
 - the **absolute ledger directory in the MAIN checkout** (never relative - a relative path writes the fork ledger inside the worktree, where the lock sweep cannot see it)

@@ -2,18 +2,22 @@
 
 **Invariants recap** (full text in `../SKILL.md`): no PR, no delivery merge (the ONE exception is a peer-branch integration merge an orchestrator ordered by name), no branch/worktree deletion, no tree-mutating recovery. Five human gates only — never ask "should I continue?". A bypass is *any* flag or env var whose effect is that a hook does not run. Every measurement is a reading. Gates run through `../scripts/gate.sh`. One step file at a time.
 
-Branch `<type>/<spec-slug>-<YYYYMMDD>`, worktree `.claude/worktrees/<spec-slug>-<YYYYMMDD>` — one pair per spec, named from that spec, never a combined slug and never a harness-generated random name.
+Branch `<type>/<spec-slug>-<YYYYMMDD>`, worktree `.claude/worktrees/<spec-slug>-<YYYYMMDD>` — one pair per spec, named from that spec, never a combined slug and never a harness-generated random name. **Linked sessions are the one exception for the worktree directory**: the app creates and names it; the branch rule still holds (the session creates the branch), and the orchestrator records the worktree path the session reports.
 
 **N = 1:** use `superpowers:using-git-worktrees`, then build inline. This is not optional and it is not implied by anything else in this step — a run that skipped it built on branches switched in place inside the main checkout, while another session was working in the same repo.
 
-**N ≥ 2:** the orchestrator creates every worktree itself, up front, and **stays on the main checkout** — so it can always inspect all of them.
+**N ≥ 2, linked sessions (the default):** the orchestrator does **not** create worktrees. Each `start_session` call in step-05 §5.1 (`use_worktree: true`) makes the app create one, and the session's first action, per `../references/session-contract.md`, puts the real branch in it: `git switch --no-track -c <type>/<spec-slug>-<YYYYMMDD> origin/<default-branch>` (`--no-track`, or the upstream becomes the default branch and a bare `git push` aims at it — measured 2026-10-15). That one command fixes both things the app gets wrong for this run (measured 2026-10-15): it names the branch `claude/<name>-<suffix>` whatever `branch_name` asked for, and it cuts the worktree from the **local** default branch, which may be behind or diverged from the remote. The app's `claude/...` branch is left untouched, with no commits, and listed in the handoff for manual removal. A **total** dependency also starts from the default branch and merges its dependency at the grant (step-02 §2.2).
+
+What the orchestrator does here for sessions: initialize every builder ledger file (`../scripts/ledger.py init --dir <abs> --fork <slug> --run-id <RUN_ID> --specs <slug>`), read its own session id (`mcp__ccd_session_mgmt__get_session "self"`) into `ledger.md`, and go straight to step-05 §5.1 in the same turn. The §3.1 bootstrap moves into each session (it is per worktree); the orchestrator accepts a session's `READY` only after reading it, with the worktree path and the resolved `hooksPath`, from that session's ledger file on disk. The READY line carries `branch=` and `worktree=`; accept it only when `git worktree list` shows that worktree on that branch. Never read the branch from `get_session`: the app's `branch` field still shows `claude/...` after the switch.
+
+**N ≥ 2, fork fallback:** the orchestrator creates every worktree itself, up front, and **stays on the main checkout** — so it can always inspect all of them.
 
 ```bash
 git worktree add -b <type>/<spec-slug>-<YYYYMMDD> \
   .claude/worktrees/<spec-slug>-<YYYYMMDD> origin/<default-branch>
 ```
 
-For a **total** dependency the base ref is the dependency's branch instead, and that worktree is created only after the dependency reports `PUSHED`. An **ordered** dependency still branches from the default branch and starts immediately.
+For a **total** dependency on the fork path the base ref is the dependency's branch instead, and that worktree is created only after the dependency reports `PUSHED`. An **ordered** dependency still branches from the default branch and starts immediately.
 
 ## 3.1 Bootstrap checklist — run it in this order, per worktree
 
@@ -25,7 +29,7 @@ For a **total** dependency the base ref is the dependency's branch instead, and 
 4. **Confirm `core.hooksPath` resolves to a directory that exists.** Hook managers commonly point it at a **relative** directory their own install script creates. A worktree that never had dependencies installed resolves that path to nothing — and git runs **no hooks and reports nothing**. Not one gate skipped: every gate, quietly, while commits and pushes succeed and nothing goes red. This is the most complete false green the run can produce, and this step is what creates the opportunity. One `ls` per worktree.
 5. **Prove a gate can go red.** Run one gate through `../scripts/gate.sh --prove-red` against a known-bad input. An inventory of green checks is not coverage until you know which of them could have returned non-zero.
 
-Treat a fork reporting "all gates green" from a worktree that did not pass all five as reporting nothing at all.
+On the fork path the orchestrator runs this list; a linked session runs it itself, inside its own worktree. Treat a builder reporting "all gates green" from a worktree that did not pass all five as reporting nothing at all.
 
 ## 3.2 What `EnterWorktree` actually does — three separate facts
 
@@ -35,11 +39,13 @@ An earlier version of this skill collapsed these into one contradictory claim. T
 - **A plain session can.** One orchestrator entered five worktrees in sequence with no refusal and returned to the main checkout with `ExitWorktree`. So the refusal is specific to forks. The practical consequence lands in step-06: the close-out must **not** tell the user that a fresh session is the only way to run `/session-end`.
 - **`EnterWorktree` fails outright when the session's working directory is not inside a git repository** — a different failure with a different message, and nothing to do with forks.
 
+A linked session needs none of this: the app starts it inside its own worktree.
+
 There is a fourth, for later: **`ExitWorktree`'s removal path measures against the branch name the worktree was created with**, so it fails after the project-mandated `git branch -m`. Removal is `/session-end`'s job, not this skill's, but the fork contract mentions it so nobody is surprised.
 
 ## 3.3 Isolation is a discipline, not a tool call
 
-Because a fork cannot enter, the fork contract states isolation as rules:
+Because a fork cannot enter, the fork contract states isolation as rules (a linked session is already inside its worktree and keeps only the last one, the branch check before every commit):
 
 - every `Read`/`Write`/`Edit` takes an absolute path under the fork's worktree — never a relative one;
 - **every `Bash` call `cd`s into the worktree in the same command** — this applies to a fork, whose session is *not* inside the worktree. A session that **is** inside a worktree has compound bash refused and must do the opposite: one simple command per call, no `cd X && …`. Know which of the two you are before writing a command.
@@ -62,10 +68,11 @@ During a containment window this stops being an economy and becomes correctness 
 - About to dispatch a fork into a worktree whose hook directory you have not seen with your own eyes.
 - About to dispatch without having proved one gate can go red.
 - About to build an `N = 1` run without a worktree.
-- About to create a total-dependency branch before its dependency reported `PUSHED`.
+- About to create a total-dependency branch before its dependency reported `PUSHED` (fork path).
+- About to create worktrees yourself for linked sessions, or to end the turn before every session is open.
 - About to put two sessions in one worktree, for any reason.
 
 ## NEXT
 
 **N = 1** → `step-04-build.md`
-**N ≥ 2** → `step-05-orchestrate.md` (which dispatches forks into `step-04-build.md`)
+**N ≥ 2** → `step-05-orchestrate.md` (which opens the sessions, or dispatches the forks, into `step-04-build.md`)
